@@ -1,6 +1,7 @@
 "use client";
 
 import { useAuthStore } from "@/store/auth-store";
+import { goToMarketingHome } from "@/lib/marketing-site";
 import { useBranchStore } from "@/store/branch-store";
 import { useSettingsStore } from "@/store/settings-store";
 import { useScopedNotifications } from "@/hooks/use-scoped-data";
@@ -78,7 +79,7 @@ export function Header() {
 
   const handleLogout = () => {
     logout();
-    router.push("/login");
+    goToMarketingHome();
   };
 
   const canSelectOrgWide = useMemo(

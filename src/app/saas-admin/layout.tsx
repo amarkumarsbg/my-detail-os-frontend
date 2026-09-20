@@ -6,6 +6,7 @@ import { useRouter } from "next/navigation";
 import { useAuthStore } from "@/store/auth-store";
 import { isPlatformOwner } from "@/lib/rbac";
 import { Button } from "@/components/ui/button";
+import { goToMarketingHome, goToMarketingLogin } from "@/lib/marketing-site";
 
 export default function SaasAdminLayout({ children }: { children: React.ReactNode }) {
   const router = useRouter();
@@ -28,7 +29,7 @@ export default function SaasAdminLayout({ children }: { children: React.ReactNod
       await useAuthStore.getState().ensureValidSession();
       const auth = useAuthStore.getState();
       if (!auth.isAuthenticated) {
-        router.replace("/login");
+        goToMarketingLogin();
         return;
       }
       if (!isPlatformOwner(auth.user?.role)) {
@@ -63,7 +64,7 @@ export default function SaasAdminLayout({ children }: { children: React.ReactNod
               size="sm"
               onClick={() => {
                 logout();
-                router.replace("/login");
+                goToMarketingHome();
               }}
             >
               Sign out
