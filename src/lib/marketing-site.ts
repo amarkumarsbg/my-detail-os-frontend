@@ -14,7 +14,7 @@ export function marketingSiteUrl(): string {
   if (process.env.NODE_ENV !== "production") {
     return "http://localhost:3003";
   }
-  return "https://www.primedetailers.com";
+  return "https://prime-detailers-website.vercel.app";
 }
 
 export function marketingLoginUrl(): string {
