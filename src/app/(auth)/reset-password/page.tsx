@@ -18,6 +18,11 @@ import {
   AlertCircle,
 } from "lucide-react";
 import { toast } from "sonner";
+import {
+  goToMarketingLogin,
+  marketingForgotPasswordUrl,
+  marketingLoginUrl,
+} from "@/lib/marketing-site";
 
 type ResetLinkState = "absent" | "checking" | "active" | "inactive" | "error";
 
