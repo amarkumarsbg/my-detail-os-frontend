@@ -13,6 +13,7 @@ import { buildApiUrl } from "@/lib/api-base";
 import { PASSWORD_POLICY_HINT, validateStrongPassword } from "@/lib/password-policy";
 import type { Branch, User } from "@/types";
 import { defaultBranchForUser } from "@/lib/branch-selection";
+import { goToMarketingHome, goToMarketingLogin } from "@/lib/marketing-site";
 
 export default function ChangePasswordPage() {
   const router = useRouter();
@@ -43,7 +44,7 @@ export default function ChangePasswordPage() {
 
   useEffect(() => {
     if (!authReady || accessToken) return;
-    router.replace("/login");
+    goToMarketingLogin();
   }, [authReady, accessToken, router]);
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -66,7 +67,7 @@ export default function ChangePasswordPage() {
     }
     if (!accessToken) {
       toast.error("Session expired — please sign in again.");
-      router.replace("/login");
+      goToMarketingLogin();
       return;
     }
     setLoading(true);
@@ -225,7 +226,7 @@ export default function ChangePasswordPage() {
                 className="w-full text-muted-foreground"
                 onClick={() => {
                   logout();
-                  router.replace("/login");
+                  goToMarketingLogin();
                 }}
               >
                 Sign out instead

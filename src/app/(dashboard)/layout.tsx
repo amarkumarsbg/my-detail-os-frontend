@@ -18,6 +18,7 @@ import { isHrStaffNavPath, userHasWithoutEditAccess } from "@/lib/staff-access";
 import { useSidebarStore } from "@/store/sidebar-store";
 import { cn } from "@/lib/utils";
 import { SubscriptionRenewBanner } from "@/components/billing/subscription-renew-banner";
+import { goToMarketingLogin } from "@/lib/marketing-site";
 
 export default function DashboardLayout({ children }: { children: React.ReactNode }) {
   const isAuthenticated = useAuthStore((s) => s.isAuthenticated);
@@ -64,7 +65,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   useEffect(() => {
     if (!authReady || !sessionChecked) return;
     if (!isAuthenticated) {
-      router.push("/login");
+      goToMarketingLogin();
     }
   }, [authReady, sessionChecked, isAuthenticated, router]);
 

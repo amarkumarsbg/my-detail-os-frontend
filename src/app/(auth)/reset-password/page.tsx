@@ -99,7 +99,7 @@ function ResetPasswordForm() {
         return;
       }
       toast.success(body.data?.message ?? "Password updated.");
-      router.push("/login");
+      goToMarketingLogin();
     } catch {
       setError("Network error — is the API running?");
     }
@@ -147,7 +147,7 @@ function ResetPasswordForm() {
           </div>
 
           <Link
-            href="/login"
+            href={marketingLoginUrl()}
             className="inline-flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground transition-colors mb-8 group"
           >
             <ArrowLeft className="w-3.5 h-3.5 transition-transform group-hover:-translate-x-0.5" />
@@ -209,10 +209,10 @@ function ResetPasswordForm() {
               </p>
               <div className="flex flex-col sm:flex-row gap-2">
                 <Button className="rounded-xl h-11" asChild>
-                  <Link href="/forgot-password">Forgot password</Link>
+                  <Link href={marketingForgotPasswordUrl()}>Forgot password</Link>
                 </Button>
                 <Button variant="outline" className="rounded-xl h-11" asChild>
-                  <Link href="/login">Back to sign in</Link>
+                  <Link href={marketingLoginUrl()}>Back to sign in</Link>
                 </Button>
               </div>
             </div>

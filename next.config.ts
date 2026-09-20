@@ -18,9 +18,14 @@ const nextConfig: NextConfig = {
     ],
   },
   async redirects() {
+    const marketing =
+      process.env.NEXT_PUBLIC_MARKETING_SITE_URL?.replace(/\/$/, "") ||
+      (process.env.NODE_ENV === "production"
+        ? "https://www.primedetailers.com"
+        : "http://localhost:3003");
     return [
-      { source: "/signup", destination: "/login", permanent: true },
-      { source: "/register", destination: "/login", permanent: true },
+      { source: "/signup", destination: `${marketing}/signup`, permanent: false },
+      { source: "/register", destination: `${marketing}/signup`, permanent: false },
     ];
   },
   async rewrites() {
