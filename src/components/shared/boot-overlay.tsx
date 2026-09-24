@@ -7,7 +7,7 @@
 export function BootOverlay() {
   return (
     <div
-      className="fixed inset-0 z-[100] flex items-center justify-center bg-slate-950"
+      className="fixed inset-0 z-[100] flex items-center justify-center bg-white"
       role="status"
       aria-live="polite"
       aria-busy="true"
