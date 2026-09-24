@@ -11,6 +11,8 @@ import {
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useSidebarStore } from "@/store/sidebar-store";
+import { stripOrgSlugFromPath } from "@/lib/tenant";
+import { useTenantPath } from "@/components/tenant/tenant-context";
 
 const NAV_ITEMS = [
   { href: "/dashboard", label: "Home", icon: LayoutDashboard, match: (p: string) => p === "/dashboard" },
@@ -38,6 +40,8 @@ function shouldHideBottomNav(pathname: string): boolean {
 
 export function MobileBottomNav() {
   const pathname = usePathname();
+  const appPath = stripOrgSlugFromPath(pathname);
+  const tenantHref = useTenantPath();
   const mobileOpen = useSidebarStore((s) => s.mobileOpen);
   const setMobileOpen = useSidebarStore((s) => s.setMobileOpen);
   const toggleMobileOpen = useSidebarStore((s) => s.toggleMobileOpen);
@@ -46,7 +50,7 @@ export function MobileBottomNav() {
     setMobileOpen(false);
   }, [pathname, setMobileOpen]);
 
-  if (shouldHideBottomNav(pathname)) return null;
+  if (shouldHideBottomNav(appPath)) return null;
 
   return (
     <nav
@@ -55,12 +59,12 @@ export function MobileBottomNav() {
     >
       <div className="grid h-14 grid-cols-4">
         {NAV_ITEMS.map((item) => {
-          const active = item.match(pathname);
+          const active = item.match(appPath);
           const Icon = item.icon;
           return (
             <Link
               key={item.href}
-              href={item.href}
+              href={tenantHref(item.href)}
               onClick={() => setMobileOpen(false)}
               className={cn(
                 "flex flex-col items-center justify-center gap-0.5 text-[10px] font-medium transition-colors",

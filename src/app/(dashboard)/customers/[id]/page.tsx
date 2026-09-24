@@ -406,7 +406,7 @@ export default function CustomerDetailPage() {
       toast.error("Add a phone number to send via WhatsApp");
       return;
     }
-    const message = `Use my referral code ${customer.referralCode} at Prime Detailers for exclusive benefits!`;
+    const message = `Use my referral code ${customer.referralCode} at MY DETAIL OS for exclusive benefits!`;
     try {
       await sendCustomerWhatsApp(phone, message);
       toast.success("Referral message sent", { description: phone });

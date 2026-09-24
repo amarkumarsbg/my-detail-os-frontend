@@ -17,6 +17,8 @@ import { resolveAppointmentKind } from "@/lib/appointment-ids";
 import { canAccessNavItem } from "@/lib/rbac";
 import { NAV_GROUPS } from "@/lib/nav-items";
 import { isHrStaffNavHref, userHasWithoutEditAccess } from "@/lib/staff-access";
+import { stripOrgSlugFromPath } from "@/lib/tenant";
+import { useTenantPath } from "@/components/tenant/tenant-context";
 import {
   CarFront,
   X,
@@ -63,6 +65,8 @@ function SidebarContent({
   className?: string;
 }) {
   const pathname = usePathname();
+  const appPath = stripOrgSlugFromPath(pathname);
+  const tenantHref = useTenantPath();
   const user = useAuthStore((s) => s.user);
   const userRole = user?.role;
   const userPermissions = user?.permissions;
@@ -131,7 +135,7 @@ function SidebarContent({
 
   useLayoutEffect(() => {
     updateScrollHint();
-  }, [pathname, userRole, navContentSignature, updateScrollHint]);
+  }, [appPath, userRole, navContentSignature, updateScrollHint]);
 
   useEffect(() => {
     const el = navRef.current;
@@ -184,11 +188,11 @@ function SidebarContent({
               </div>
               <div className="space-y-0.5 px-1.5">
                 {group.items.map((item) => {
-                  const isActive = isNavItemActive(pathname, item.href);
+                  const isActive = isNavItemActive(appPath, item.href);
                   return (
                     <Link
                       key={item.href}
-                      href={item.href}
+                      href={tenantHref(item.href)}
                       onClick={() => {
                         if (SIDEBAR_CLEAR_FILTER_HREFS.has(item.href)) clearDashboardFilter(null);
                         onNavClick?.();
@@ -253,6 +257,7 @@ function SidebarContent({
 
 export function Sidebar() {
   const router = useRouter();
+  const tenantHref = useTenantPath();
   const { mobileOpen, setMobileOpen, collapsed, setCollapsed } = useSidebarStore();
   const businessName = useSettingsStore((s) => s.businessName);
   const businessLogo = useSettingsStore((s) => s.businessLogo);
@@ -268,7 +273,7 @@ export function Sidebar() {
 
   const brandHeader = (onClick?: () => void) => (
     <Link
-      href="/dashboard"
+      href={tenantHref("/dashboard")}
       onClick={onClick}
       className="flex items-center gap-3 min-w-0 rounded-lg outline-none focus-visible:ring-2 focus-visible:ring-primary/40"
       aria-label="Go to dashboard"
@@ -281,7 +286,13 @@ export function Sidebar() {
             className="object-cover"
             key={companyLogoSrc}
           />
-        ) : null}
+        ) : (
+          <AvatarImage
+            src="/my-detail-os-mark.png"
+            alt="MY DETAIL OS"
+            className="object-cover"
+          />
+        )}
         <AvatarFallback className="bg-[var(--sidebar-active)] text-[var(--sidebar-active-foreground)]">
           <CarFront
             className="h-[22px] w-[22px]"

@@ -5,6 +5,7 @@ import { ThemeProvider } from "@/components/shared/theme-provider";
 import { BrandThemeApplier } from "@/components/shared/brand-theme-applier";
 import { AttendanceRealtimeSync } from "@/components/attendance/attendance-realtime-sync";
 import { VisualViewportCssVars } from "@/components/shared/visual-viewport-css-vars";
+import { TenantProvider } from "@/components/tenant/tenant-context";
 import "./globals.css";
 
 const inter = Inter({
@@ -13,8 +14,15 @@ const inter = Inter({
 });
 
 export const metadata: Metadata = {
-  title: "Prime Detailers - Car Service Management",
+  title: "MY DETAIL OS - Car Service Management",
   description: "Admin CRM portal for car service business management",
+  icons: {
+    icon: [
+      { url: "/icon.png", type: "image/png" },
+      { url: "/favicon.png", type: "image/png" },
+    ],
+    apple: [{ url: "/apple-touch-icon.png" }],
+  },
 };
 
 /**
@@ -71,11 +79,13 @@ export default function RootLayout({
       </head>
       <body className={`${inter.variable} font-sans antialiased`}>
         <ThemeProvider>
-          <BrandThemeApplier />
-          <VisualViewportCssVars />
-          <AttendanceRealtimeSync />
-          {children}
-          <Toaster position="top-right" richColors closeButton />
+          <TenantProvider>
+            <BrandThemeApplier />
+            <VisualViewportCssVars />
+            <AttendanceRealtimeSync />
+            {children}
+            <Toaster position="top-right" richColors closeButton />
+          </TenantProvider>
         </ThemeProvider>
       </body>
     </html>

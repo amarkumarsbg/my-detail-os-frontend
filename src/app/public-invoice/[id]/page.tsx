@@ -80,13 +80,13 @@ export default function PublicInvoicePage() {
 
     const businessDetails = {
       ...business,
-      businessName: businessSettings?.businessName || "Prime Detailers",
+      businessName: businessSettings?.businessName || "MY DETAIL OS",
       businessTagline: businessSettings?.businessTagline || "Car Wash & Detailing Studio",
       businessAddress: businessSettings?.businessAddress || "80 Feet Road, Koramangala, Bengaluru 560034",
       businessPhone: businessSettings?.businessPhone || "+91-80-4123-4567",
       businessWhatsApp: businessSettings?.businessWhatsApp || "+91-80-4123-4567",
-      businessEmail: businessSettings?.businessEmail || "hello@primedetailers.in",
-      businessWebsite: businessSettings?.businessWebsite || "www.primedetailers.in",
+      businessEmail: businessSettings?.businessEmail || "hello@mydetailos.com",
+      businessWebsite: businessSettings?.businessWebsite || "www.mydetailos.com",
       gstin: businessSettings?.gstin || "29AABCT1234F1ZP",
       companyPan: businessSettings?.companyPan || "ABCDE1234F",
       bankName: businessSettings?.bankName || "",
@@ -188,7 +188,7 @@ export default function PublicInvoicePage() {
   const isPaid = invoice.status === "PAID" || totalPaid >= invoice.grandTotal;
   const remainingBalance = Math.max(0, invoice.grandTotal - totalPaid);
 
-  const businessName = businessSettings?.businessName || "Prime Detailers";
+  const businessName = businessSettings?.businessName || "MY DETAIL OS";
   const businessPhone = businessSettings?.businessPhone || "+91-80-4123-4567";
   const businessWhatsApp = businessSettings?.businessWhatsApp || "+91-80-4123-4567";
   const vehicleDetailsLine = formatInvoiceVehicleDetailsLine({

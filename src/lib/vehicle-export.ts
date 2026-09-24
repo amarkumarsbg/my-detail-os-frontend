@@ -97,7 +97,7 @@ export async function downloadVehiclesExcel(rows: VehicleExportRow[]): Promise<v
   requireCanExportData();
   const ExcelJS = (await import("exceljs")).default;
   const workbook = new ExcelJS.Workbook();
-  workbook.creator = "Prime Detailers";
+  workbook.creator = "MY DETAIL OS";
   workbook.created = new Date();
 
   const sheet = workbook.addWorksheet("Vehicles", {

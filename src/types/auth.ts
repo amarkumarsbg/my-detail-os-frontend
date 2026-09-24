@@ -57,6 +57,8 @@ export interface User {
   notes?: string;
   /** Server sets true until the user completes an authenticated password change (onboarding). */
   mustChangePassword?: boolean;
+  /** Organization this staff user belongs to (from auth/me). */
+  organizationId?: string;
   /** ISO timestamp when login password was last changed (server audit). */
   passwordUpdatedAt?: string;
   /** Staff user id who provisioned this account password (server audit). */

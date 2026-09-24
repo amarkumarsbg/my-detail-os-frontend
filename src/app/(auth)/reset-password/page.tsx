@@ -124,7 +124,7 @@ function ResetPasswordForm() {
             <div className="flex items-center justify-center w-10 h-10 rounded-xl bg-white/15 backdrop-blur-sm">
               <Wrench className="w-5 h-5" />
             </div>
-            <span className="text-lg font-semibold tracking-tight">Prime Detailers</span>
+            <span className="text-lg font-semibold tracking-tight">MY DETAIL OS</span>
           </div>
           <div className="max-w-lg space-y-4">
             <h2 className="text-4xl xl:text-5xl font-bold leading-tight tracking-tight">
@@ -137,7 +137,7 @@ function ResetPasswordForm() {
             </p>
           </div>
           <p className="text-emerald-200/50 text-sm">
-            &copy; {new Date().getFullYear()} Prime Detailers. All rights reserved.
+            &copy; {new Date().getFullYear()} MY DETAIL OS. All rights reserved.
           </p>
         </div>
       </div>
@@ -148,7 +148,7 @@ function ResetPasswordForm() {
             <div className="flex items-center justify-center w-10 h-10 rounded-xl bg-primary shadow-lg shadow-primary/25">
               <Wrench className="w-5 h-5 text-primary-foreground" />
             </div>
-            <span className="text-lg font-semibold tracking-tight">Prime Detailers</span>
+            <span className="text-lg font-semibold tracking-tight">MY DETAIL OS</span>
           </div>
 
           <Link
@@ -314,7 +314,7 @@ function ResetPasswordForm() {
           ) : null}
 
           <p className="text-center text-xs text-muted-foreground/60 mt-10 lg:hidden">
-            Prime Detailers v1.0 &middot; Internal Use Only
+            MY DETAIL OS v1.0 &middot; Internal Use Only
           </p>
         </div>
       </div>

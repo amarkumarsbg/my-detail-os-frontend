@@ -15,8 +15,12 @@ interface CustomerAuthState {
   isAuthenticated: boolean;
   accessToken: string | null;
 
-  /** Login with phone and password */
-  login: (phone: string, password: string) => Promise<{ ok: true } | { ok: false; message: string }>;
+  /** Login with phone and password (tenant-scoped via organizationSlug). */
+  login: (
+    phone: string,
+    password: string,
+    organizationSlug?: string | null
+  ) => Promise<{ ok: true } | { ok: false; message: string }>;
   
   /** Verify and apply JWT session */
   applyAuthPayload: (data: CustomerAuthSessionPayload) => void;
@@ -43,7 +47,7 @@ export const useCustomerAuthStore = create<CustomerAuthState>()(
         });
       },
 
-      login: async (phone: string, password: string) => {
+      login: async (phone: string, password: string, organizationSlug?: string | null) => {
         const digits = phone.replace(/\D/g, "");
         if (digits.length !== 10) {
           return { ok: false, message: "Enter a valid 10-digit mobile number" };
@@ -51,12 +55,19 @@ export const useCustomerAuthStore = create<CustomerAuthState>()(
         if (!password) {
           return { ok: false, message: "Enter your password" };
         }
+        const slug = typeof organizationSlug === "string" ? organizationSlug.trim() : "";
+        if (!slug) {
+          return {
+            ok: false,
+            message: "Open your workshop customer portal link to sign in.",
+          };
+        }
 
         try {
           const res = await fetch(buildApiUrl("/api/auth/customer/login"), {
             method: "POST",
             headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ phone: digits, password }),
+            body: JSON.stringify({ phone: digits, password, organizationSlug: slug }),
           });
 
           const body = (await res.json()) as {
@@ -84,7 +95,7 @@ export const useCustomerAuthStore = create<CustomerAuthState>()(
           });
 
           return { ok: true };
-        } catch (e) {
+        } catch {
           return {
             ok: false,
             message: "Network error — is the API running?",

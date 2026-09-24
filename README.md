@@ -1,4 +1,4 @@
-# Prime Detailers
+# MY DETAIL OS
 
 A modern garage/auto-service management platform built with Next.js, Tailwind CSS, and Zustand.
 

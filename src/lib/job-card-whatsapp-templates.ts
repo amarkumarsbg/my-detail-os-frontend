@@ -96,7 +96,7 @@ export function buildJobCardTemplateMessage(
   const { buildBeforePhotosReadyWhatsAppMessage, buildJobReadyForPickupWhatsAppMessage, buildJobDeliveredWhatsAppMessage, buildJobCardCustomerWhatsAppMessage, buildInvoiceWhatsAppMessage } = require("@/lib/whatsapp-customer-messages");
   const { buildBookingWhatsAppMessageCompact } = require("@/lib/booking-confirmation-message");
   
-  const bizName = opts.businessName.trim() || "Prime Detailers";
+  const bizName = opts.businessName.trim() || "MY DETAIL OS";
 
   switch (templateId) {
     case "booking_confirmed":

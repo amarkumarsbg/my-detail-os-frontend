@@ -61,8 +61,11 @@ export function buildJobCardCustomerWhatsAppMessage(
     temporaryPassword?: string;
     /** Portal URL — defaults to /customer/login on current origin */
     portalUrl?: string;
+    /** Organization display name for customer-facing content */
+    businessName?: string;
   }
 ): string {
+  const brand = options?.businessName?.trim() || "MY DETAIL OS";
   const firstName = job.customerName.trim().split(/\s+/)[0] ?? job.customerName;
   const vehicle = `${job.vehicleMakeModel} (${job.vehicleRegNumber})`.trim();
   const serviceNames = job.services
@@ -96,8 +99,8 @@ export function buildJobCardCustomerWhatsAppMessage(
       ];
 
   const introLine = job.status === "RECEIVED" 
-    ? `Your job card has been created at *Prime Detailers*. 🚗`
-    : `Here is an update on your job card at *Prime Detailers*. 🚗`;
+    ? `Your job card has been created at *${brand}*. 🚗`
+    : `Here is an update on your job card at *${brand}*. 🚗`;
 
   return [
     `Hi *${firstName}*! 👋`,
@@ -111,13 +114,17 @@ export function buildJobCardCustomerWhatsAppMessage(
     ...credentialsBlock,
     ``,
     `Reply here if you have any questions.`,
-    `— Team Prime Detailers`,
+    `— Team ${brand}`,
   ]
     .filter((l): l is string => l !== null && l !== undefined)
     .join("\n");
 }
 
-export function buildServiceReminderWhatsAppMessage(reminder: ServiceReminder): string {
+export function buildServiceReminderWhatsAppMessage(
+  reminder: ServiceReminder,
+  opts: { businessName?: string } = {}
+): string {
+  const brand = opts.businessName?.trim() || "MY DETAIL OS";
   const firstName = reminder.customerName.trim().split(/\s+/)[0] ?? reminder.customerName;
   const typeLabel = REMINDER_TYPE_LABEL[reminder.type] ?? reminder.type;
   const due = format(parseISO(reminder.dueDate), "EEE, dd-MMM-yyyy");
@@ -126,7 +133,7 @@ export function buildServiceReminderWhatsAppMessage(reminder: ServiceReminder): 
   return [
     `Hi *${firstName}*! 👋`,
     ``,
-    `Friendly reminder from *Prime Detailers* — your service is coming up! 🔔`,
+    `Friendly reminder from *${brand}* — your service is coming up! 🔔`,
     ``,
     `🔧 Service: *${typeLabel}*`,
     `🚗 Vehicle: ${vehicle}`,
@@ -135,13 +142,17 @@ export function buildServiceReminderWhatsAppMessage(reminder: ServiceReminder): 
     ``,
     `Book a slot at your convenience — reply here or call us. We'll be happy to help!`,
     ``,
-    `— Team Prime Detailers`,
+    `— Team ${brand}`,
   ]
     .filter((l): l is string => l !== null && l !== undefined)
     .join("\n");
 }
 
-export function buildQuotationWhatsAppMessage(q: Quotation): string {
+export function buildQuotationWhatsAppMessage(
+  q: Quotation,
+  opts: { businessName?: string } = {}
+): string {
+  const brand = opts.businessName?.trim() || "MY DETAIL OS";
   const first = q.customerName.trim().split(/\s+/)[0] ?? q.customerName;
   const hasServices = q.services.length > 0;
   const hasParts = (q.parts ?? []).length > 0;
@@ -158,7 +169,7 @@ export function buildQuotationWhatsAppMessage(q: Quotation): string {
   return [
     `Hi *${first}*! 👋`,
     ``,
-    `Here is your estimate *${q.quotationNumber}* from *Prime Detailers*. 📄`,
+    `Here is your estimate *${q.quotationNumber}* from *${brand}*. 📄`,
     ``,
     hasServices ? `🚗 Vehicle: ${q.vehicleMakeModel} (${q.vehicleRegNumber})` : hasParts ? `🛝 Type: Counter Sale` : "",
     hasServices ? `\n🔧 *Services:*\n${serviceLines}` : "",
@@ -171,18 +182,23 @@ export function buildQuotationWhatsAppMessage(q: Quotation): string {
     ``,
     `Reply here to approve or ask any questions. We're happy to help!`,
     ``,
-    `— Team Prime Detailers`,
+    `— Team ${brand}`,
   ]
     .filter((l): l is string => l !== null && l !== undefined)
     .join("\n");
 }
 
-export function buildFollowUpWhatsAppMessage(fu: FollowUp, lastVisitLabel: string): string {
+export function buildFollowUpWhatsAppMessage(
+  fu: FollowUp,
+  lastVisitLabel: string,
+  opts: { businessName?: string } = {}
+): string {
+  const brand = opts.businessName?.trim() || "MY DETAIL OS";
   const first = fu.customerName.trim().split(/\s+/)[0] ?? fu.customerName;
   return [
     `Hi *${first}*! 👋`,
     ``,
-    `We miss you at *Prime Detailers*! ❤️`,
+    `We miss you at *${brand}*! ❤️`,
     ``,
     `It\'s been a while since your last visit — *${lastVisitLabel}* (${fu.daysSinceLastVisit} days ago).`,
     ``,
@@ -190,7 +206,7 @@ export function buildFollowUpWhatsAppMessage(fu: FollowUp, lastVisitLabel: strin
     ``,
     `Reply here or call us to book a service — we\'ll be happy to have you back.`,
     ``,
-    `— Team Prime Detailers`,
+    `— Team ${brand}`,
   ].join("\n");
 }
 
@@ -198,7 +214,7 @@ export function buildPickupDropWhatsAppMessage(
   req: PickupDropRequest,
   opts: { branchName?: string; businessName?: string } = {}
 ): string {
-  const biz = opts.businessName?.trim() || "Prime Detailers";
+  const biz = opts.businessName?.trim() || "MY DETAIL OS";
   const mm = req.vehicleMakeModel?.trim();
   const reg = req.vehicleRegNumber?.trim();
 
@@ -330,7 +346,7 @@ export function buildPickupAndDropScheduledWhatsAppMessage(
   drop: PickupDropRequest,
   opts: { branchName?: string; businessName?: string } = {}
 ): string {
-  const biz = opts.businessName?.trim() || "Prime Detailers";
+  const biz = opts.businessName?.trim() || "MY DETAIL OS";
   const first = pickup.customerName.trim().split(/\s+/)[0] ?? pickup.customerName;
   const when = (() => {
     try {

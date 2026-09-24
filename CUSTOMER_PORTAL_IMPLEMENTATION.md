@@ -274,7 +274,7 @@ const response = await apiGet("/api/customer/bootstrap");
 ### Message Sent When Customer Created
 
 ```
-Hi Vijay! 🎉 Welcome to Prime Detailer!
+Hi Vijay! 🎉 Welcome to MY DETAIL OS!
 
 Your booking BK-2025-001 has been confirmed.
 
@@ -284,11 +284,11 @@ Here are your account credentials to track your service:
 🔑 Password: aBc123$!
 
 Please log in at our customer portal to track your vehicle:
-https://app.primedetailer.com/customer/login
+https://www.mydetailos.com/{orgSlug}/customer/login
 
 Please change your password after first login for security.
 
-Thank you for choosing Prime Detailer! 🚗
+Thank you for choosing MY DETAIL OS! 🚗
 We look forward to serving you.
 ```
 

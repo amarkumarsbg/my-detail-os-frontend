@@ -42,7 +42,7 @@ export function resolveContactUsUrl(entitlement: OrganizationEntitlement | null 
   return (
     entitlement?.subscription.contactUsUrl ||
     process.env.NEXT_PUBLIC_CONTACT_US_URL ||
-    "mailto:support@primedetailers.in?subject=Branch%20limit%20help"
+    "mailto:support@mydetailos.com?subject=Branch%20limit%20help"
   );
 }
 
@@ -82,7 +82,7 @@ export function resolveUpgradeUrl(entitlement: OrganizationEntitlement | null | 
   return (
     entitlement?.subscription.upgradeUrl ||
     process.env.NEXT_PUBLIC_UPGRADE_URL ||
-    "mailto:support@primedetailers.in?subject=Upgrade%20plan%20request"
+    "mailto:support@mydetailos.com?subject=Upgrade%20plan%20request"
   );
 }
 

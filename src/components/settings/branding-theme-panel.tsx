@@ -428,7 +428,7 @@ export function BrandingThemePanel() {
                 <LoginHeroPanel
                   compact
                   className="h-[420px] w-full"
-                  businessName={businessName || "Prime Detailers"}
+                  businessName={businessName || "MY DETAIL OS"}
                   logoUrl={logoPreview}
                   backgroundUrl={bgPreview}
                   heading={previewHero.heading}

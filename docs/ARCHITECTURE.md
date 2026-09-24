@@ -1,6 +1,6 @@
 # Architecture overview
 
-Prime Detailers is a garage / auto-service management app with two packages (not a monorepo workspace):
+MY DETAIL OS is a garage / auto-service management app with two packages (not a monorepo workspace):
 
 | Package | Role |
 |---------|------|

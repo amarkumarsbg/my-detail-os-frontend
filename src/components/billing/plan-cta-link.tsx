@@ -24,11 +24,11 @@ import {
 export function parseMailto(href: string): { email: string; subject: string | null } {
   const raw = href.trim();
   if (!/^mailto:/i.test(raw)) {
-    return { email: "support@primedetailers.in", subject: null };
+    return { email: "support@mydetailos.com", subject: null };
   }
   const withoutScheme = raw.slice("mailto:".length);
   const [addressPart, query = ""] = withoutScheme.split("?");
-  const email = decodeURIComponent(addressPart || "").trim() || "support@primedetailers.in";
+  const email = decodeURIComponent(addressPart || "").trim() || "support@mydetailos.com";
   const params = new URLSearchParams(query);
   const subject = params.get("subject");
   return { email, subject };
@@ -51,7 +51,7 @@ export function PlanSupportDialog({
 }: SupportDialogProps) {
   const { email, subject } = parseMailto(
     isPlaceholderPlanUrl(href)
-      ? "mailto:support@primedetailers.in?subject=Support%20request"
+      ? "mailto:support@mydetailos.com?subject=Support%20request"
       : href
   );
   const mailto = subject

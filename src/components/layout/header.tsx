@@ -42,6 +42,7 @@ import { useState, useEffect, useRef, useMemo } from "react";
 import Link from "next/link";
 import { useSidebarStore } from "@/store/sidebar-store";
 import { navTitleForPath } from "@/lib/nav-items";
+import { useTenantPath } from "@/components/tenant/tenant-context";
 
 export function Header() {
   const { user, currentBranch, logout, setBranch } = useAuthStore();
@@ -54,6 +55,7 @@ export function Header() {
   const unreadCount = scopedNotifications.filter((n) => !n.read).length;
   const router = useRouter();
   const pathname = usePathname();
+  const tenantHref = useTenantPath();
   const { setTheme, resolvedTheme } = useTheme();
   const [mounted, setMounted] = useState(false);
   const [notifOpen, setNotifOpen] = useState(false);
@@ -147,7 +149,13 @@ export function Header() {
                 className="object-cover"
                 key={companyLogoSrc}
               />
-            ) : null}
+            ) : (
+              <AvatarImage
+                src="/my-detail-os-mark.png"
+                alt="MY DETAIL OS"
+                className="object-cover"
+              />
+            )}
             <AvatarFallback className="bg-primary text-primary-foreground">
               <Wrench className="w-[1.125rem] h-[1.125rem] sm:w-5 sm:h-5" />
             </AvatarFallback>
@@ -291,7 +299,7 @@ export function Header() {
               <DropdownMenuLabel>My Account</DropdownMenuLabel>
               <DropdownMenuSeparator />
               <DropdownMenuItem asChild>
-                <Link href="/profile">
+                <Link href={tenantHref("/profile")}>
                   <User className="w-4 h-4 mr-2" />
                   Profile
                 </Link>

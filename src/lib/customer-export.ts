@@ -99,7 +99,7 @@ export async function downloadCustomersExcel(rows: CustomerExportRow[]): Promise
   requireCanExportData();
   const ExcelJS = (await import("exceljs")).default;
   const workbook = new ExcelJS.Workbook();
-  workbook.creator = "Prime Detailers";
+  workbook.creator = "MY DETAIL OS";
   workbook.created = new Date();
 
   const sheet = workbook.addWorksheet("Customers", {

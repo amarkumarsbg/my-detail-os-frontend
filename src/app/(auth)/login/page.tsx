@@ -1,15 +1,17 @@
 "use client";
 
 import { Suspense, useEffect, useState } from "react";
-import { useSearchParams } from "next/navigation";
+import { usePathname, useSearchParams } from "next/navigation";
 import { useAuthStore } from "@/store/auth-store";
 import { buildApiUrl } from "@/lib/api-base";
 import { goToMarketingLogin } from "@/lib/marketing-site";
+import { parseOrgSlugFromPathname, tenantPath } from "@/lib/tenant";
 
 /**
  * Staff login UI lives on the public marketing website.
  * This route only completes SSO handoff: /login#accessToken=...&next=/dashboard
- * Without a token, users are sent to the marketing login page.
+ * (or /{orgSlug}/login#… with tenant rewrite). Without a token, users are sent
+ * to the marketing login page.
  */
 function readHandoffFromLocation(searchParams: URLSearchParams): {
   token: string | null;
@@ -28,13 +30,24 @@ function readHandoffFromLocation(searchParams: URLSearchParams): {
   };
 }
 
+function resolveOrgSlug(pathname: string): string | null {
+  const fromPath = parseOrgSlugFromPathname(pathname);
+  if (fromPath) return fromPath;
+  if (typeof window !== "undefined") {
+    return parseOrgSlugFromPathname(window.location.pathname);
+  }
+  return null;
+}
+
 function LoginHandoffPage() {
   const searchParams = useSearchParams();
+  const pathname = usePathname();
   const applyAuthPayload = useAuthStore((s) => s.applyAuthPayload);
   const [message, setMessage] = useState("Opening your workshop…");
 
   useEffect(() => {
     const { token, next } = readHandoffFromLocation(searchParams);
+    const orgSlug = resolveOrgSlug(pathname);
     if (!token) {
       goToMarketingLogin();
       return;
@@ -60,6 +73,33 @@ function LoginHandoffPage() {
           goToMarketingLogin();
           return;
         }
+
+        // When landing on /{orgSlug}/login, verify JWT org matches URL tenant.
+        if (orgSlug) {
+          const orgRes = await fetch(
+            buildApiUrl(`/api/public/organizations/by-slug/${encodeURIComponent(orgSlug)}`),
+            { cache: "no-store" }
+          );
+          const orgBody = (await orgRes.json()) as {
+            data?: { id: string; slug: string; isActive: boolean } | null;
+          };
+          if (!orgRes.ok || !orgBody.data) {
+            setMessage("Workshop not found. Redirecting…");
+            goToMarketingLogin();
+            return;
+          }
+          if (!orgBody.data.isActive) {
+            setMessage("This workshop is inactive.");
+            return;
+          }
+          const userOrgId = body.data.user.organizationId;
+          if (userOrgId && userOrgId !== orgBody.data.id) {
+            setMessage("You are signed in to a different workshop. Redirecting…");
+            goToMarketingLogin();
+            return;
+          }
+        }
+
         applyAuthPayload({
           accessToken: token,
           user: body.data.user,
@@ -71,6 +111,11 @@ function LoginHandoffPage() {
         if (mustChange) dest = "/change-password";
         else if (role === "PLATFORM_OWNER") dest = "/saas-admin/organizations";
         else if (role === "CUSTOMER") dest = "/customer/dashboard";
+
+        // Keep tenant prefix for staff/customer destinations (not saas-admin).
+        if (role !== "PLATFORM_OWNER") {
+          dest = tenantPath(orgSlug, dest);
+        }
         window.location.replace(dest);
       } catch {
         if (!cancelled) {
@@ -93,7 +138,7 @@ function LoginHandoffPage() {
         <div className="space-y-1.5">
           <p className="text-lg font-semibold tracking-tight text-foreground">{message}</p>
           <p className="text-sm text-muted-foreground">
-            Staff sign-in is handled on the Prime Detailers website.
+            Staff sign-in is handled on the MY DETAIL OS website.
           </p>
         </div>
       </div>

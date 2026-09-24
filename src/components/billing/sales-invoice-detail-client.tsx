@@ -1557,7 +1557,7 @@ export function SalesInvoiceDetailClient({ invoiceId: id }: SalesInvoiceDetailCl
               <DropdownMenuItem
                 onClick={() => {
                   const customerName = invoice.customerName;
-                  const businessNameVal = businessName || "Prime Detailers";
+                  const businessNameVal = businessName || "MY DETAIL OS";
                   const invoiceNumber = invoice.invoiceNumber;
                   const totalAmount = invoice.grandTotal;
                   const vehicleName = resolvedVehicleMakeModel !== "—" ? resolvedVehicleMakeModel : "Vehicle";

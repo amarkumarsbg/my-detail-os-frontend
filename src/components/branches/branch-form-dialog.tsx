@@ -128,7 +128,7 @@ export function BranchFormDialog({ open, onOpenChange, mode, branch, onSubmit }:
                 value={form.name}
                 onChange={(e) => setForm((f) => ({ ...f, name: e.target.value }))}
                 required
-                placeholder="e.g. Prime Detailers Indiranagar"
+                placeholder="e.g. MY DETAIL OS Indiranagar"
               />
             </div>
             <div className="space-y-2">

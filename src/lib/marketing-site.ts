@@ -1,6 +1,7 @@
 /**
- * Public marketing website (prime-detailers-website).
+ * Public marketing website (MY DETAIL OS / mydetailos).
  * Staff login / signup / logout land here — not on the workshop app.
+ * Override with NEXT_PUBLIC_MARKETING_SITE_URL when needed.
  */
 
 function trimSlash(url: string): string {
@@ -14,7 +15,7 @@ export function marketingSiteUrl(): string {
   if (process.env.NODE_ENV !== "production") {
     return "http://localhost:3003";
   }
-  return "https://prime-detailers-website.vercel.app";
+  return "https://www.mydetailos.com";
 }
 
 export function marketingLoginUrl(): string {

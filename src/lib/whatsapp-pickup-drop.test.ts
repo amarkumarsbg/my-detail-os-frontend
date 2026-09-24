@@ -25,7 +25,7 @@ const pickup = {
 
 describe("pickup and drop WhatsApp messages", () => {
   it("writes a pickup scheduled message without raw status codes", () => {
-    const text = buildPickupDropWhatsAppMessage(pickup, { businessName: "Prime Detailers" });
+    const text = buildPickupDropWhatsAppMessage(pickup, { businessName: "MY DETAIL OS" });
     expect(text).toMatch(/scheduled a \*pickup\*/i);
     expect(text).not.toMatch(/DRIVER_ASSIGNED|IN_SERVICE/);
   });
@@ -42,7 +42,7 @@ describe("pickup and drop WhatsApp messages", () => {
         type: "DROP",
         status: "DELIVERED"
       },
-      { businessName: "Prime Detailerss" }
+      { businessName: "MY DETAIL OSs" }
     );
     expect(text).toBe(
       "Hi *Jaimaiki*,\n" +
@@ -52,16 +52,16 @@ describe("pickup and drop WhatsApp messages", () => {
       "Vehicle: Kia EV6 (UP93BB2222)\n" +
       "Job Card: *JC-2026-0203*\n" +
       "\n" +
-      "Thank you for choosing *Prime Detailerss*.\n" +
+      "Thank you for choosing *MY DETAIL OSs*.\n" +
       "\n" +
-      "— Prime Detailerss"
+      "— MY DETAIL OSs"
     );
   });
 
   it("combines pickup and drop-off when both are created", () => {
     const drop = { ...pickup, id: "PND-2026-0010", type: "DROP" as const };
     const text = buildPickupAndDropScheduledWhatsAppMessage(pickup, drop, {
-      businessName: "Prime Detailers",
+      businessName: "MY DETAIL OS",
     });
     expect(text).toMatch(/pickup and drop-off/i);
     expect(text).toContain("Greater Noida");

@@ -8,7 +8,7 @@ export const DEFAULT_SERVICE_HSN = "998714";
 
 export const TAX_INVOICE_DISCLAIMER = `No detailing service is perfect. Most complaints arise from pre-existing conditions that become visible after cleaning. Our team is not liable for any mechanical or electrical issues revealed post-service. Sensitive areas (engine bay, infotainment, cameras) are avoided. Your presence during the service is required. Please remove all valuables before handover.
 (a) GST invoice provided digitally. (b) Services subject to availability. (c) Advance is non-refundable on customer cancellation. (d) Pickup/visit charges: Rs. 200 min + Rs. 10/km beyond 10 km.
-This is a computer-generated document. No signature required.  |  Quality Never Goes Out of Cost — Prime Detailers`;
+This is a computer-generated document. No signature required.  |  Quality Never Goes Out of Cost — MY DETAIL OS`;
 
 export function escapeHtml(s: string | number | null | undefined): string {
   const text = s == null ? "" : String(s);

@@ -1,4 +1,5 @@
 import type { UserRole } from "@/types";
+import { stripOrgSlugFromPath } from "@/lib/tenant";
 import {
   LayoutDashboard,
   Users,
@@ -231,7 +232,7 @@ const NAV_DESCRIPTIONS: Record<string, string> = {
 };
 
 function navMatchForPath(pathname: string): { href: string; label: string } | undefined {
-  const path = pathname.split(/[?#]/)[0] ?? pathname;
+  const path = stripOrgSlugFromPath(pathname.split(/[?#]/)[0] ?? pathname);
   const candidates = [
     ...NAV_GROUPS.flatMap((group) =>
       group.items.map((item) => ({ href: item.href, label: item.label }))

@@ -83,14 +83,14 @@ export interface SerializableAppSettings {
 
 export const DEFAULT_SERIALIZABLE_APP_SETTINGS: SerializableAppSettings = {
   gstRegistrationStatus: "REGISTERED",
-  businessName: "Prime Detailers",
+  businessName: "MY DETAIL OS",
   businessLogo: "",
   businessTagline: "Car Wash & Detailing Studio",
   businessPhone: "+91-80-4123-4567",
   businessWhatsApp: "+91-80-4123-4567",
-  businessEmail: "hello@primedetailers.in",
+  businessEmail: "hello@mydetailos.com",
   businessAddress: "80 Feet Road, Koramangala 4th Block, Bengaluru 560034",
-  businessWebsite: "www.primedetailers.com",
+  businessWebsite: "www.mydetailos.com",
   gstin: "29AABCT1234F1ZP",
   companyPan: "[Your PAN]",
   bankName: "[Your Bank Name]",

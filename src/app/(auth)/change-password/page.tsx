@@ -126,7 +126,7 @@ export default function ChangePasswordPage() {
           <div className="flex items-center justify-center w-10 h-10 rounded-xl bg-primary shadow-lg shadow-primary/25">
             <Wrench className="w-5 h-5 text-primary-foreground" />
           </div>
-          <span className="text-lg font-semibold tracking-tight">Prime Detailers</span>
+          <span className="text-lg font-semibold tracking-tight">MY DETAIL OS</span>
         </div>
 
         <div className="space-y-2 text-center">

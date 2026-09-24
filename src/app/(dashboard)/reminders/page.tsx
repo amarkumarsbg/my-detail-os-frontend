@@ -442,7 +442,7 @@ export default function RemindersPage() {
     const message = buildPaymentPendingReminderWhatsAppMessage({
       pendingAmount: amount,
       statementUrl: publicCustomerLedgerShareUrl(reminder.customerId),
-      businessName: businessName || "Prime Detailers",
+      businessName: businessName || "MY DETAIL OS",
       mode: "singleInvoice",
       invoiceUrl: reminder.invoiceId ? publicInvoiceShareUrl(reminder.invoiceId) : undefined,
       invoiceNumber: reminder.invoiceNumber,

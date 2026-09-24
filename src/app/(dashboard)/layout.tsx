@@ -19,12 +19,17 @@ import { useSidebarStore } from "@/store/sidebar-store";
 import { cn } from "@/lib/utils";
 import { SubscriptionRenewBanner } from "@/components/billing/subscription-renew-banner";
 import { goToMarketingLogin } from "@/lib/marketing-site";
+import { stripOrgSlugFromPath } from "@/lib/tenant";
+import { useTenantPath } from "@/components/tenant/tenant-context";
+import { TenantGuard } from "@/components/tenant/tenant-guard";
 
 export default function DashboardLayout({ children }: { children: React.ReactNode }) {
   const isAuthenticated = useAuthStore((s) => s.isAuthenticated);
   const mustChangePassword = useAuthStore((s) => s.user?.mustChangePassword === true);
   const user = useAuthStore((s) => s.user);
   const pathname = usePathname();
+  const appPath = useMemo(() => stripOrgSlugFromPath(pathname), [pathname]);
+  const tenantHref = useTenantPath();
   const router = useRouter();
   const [authReady, setAuthReady] = useState(false);
   const [sessionChecked, setSessionChecked] = useState(false);
@@ -33,13 +38,13 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   const currentNavItem = useMemo(() => {
     for (const group of NAV_GROUPS) {
       for (const item of group.items) {
-        if (pathname === item.href || pathname.startsWith(item.href + "/")) {
+        if (appPath === item.href || appPath.startsWith(item.href + "/")) {
           return item;
         }
       }
     }
     return null;
-  }, [pathname]);
+  }, [appPath]);
 
   useEffect(() => {
     if (useAuthStore.persist.hasHydrated()) {
@@ -79,17 +84,17 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   useEffect(() => {
     if (!authReady || !sessionChecked || !isAuthenticated) return;
     if (!mustChangePassword) return;
-    void router.replace("/change-password");
-  }, [authReady, sessionChecked, isAuthenticated, mustChangePassword, router]);
+    void router.replace(tenantHref("/change-password"));
+  }, [authReady, sessionChecked, isAuthenticated, mustChangePassword, router, tenantHref]);
 
   useEffect(() => {
     if (!authReady || !sessionChecked || !isAuthenticated || !user) return;
     if (user.role === "SUPER_ADMIN") return;
-    if (userHasWithoutEditAccess(user) && isHrStaffNavPath(pathname)) {
+    if (userHasWithoutEditAccess(user) && isHrStaffNavPath(appPath)) {
       toast.error("Access Denied", {
         description: "HR & Staff is not available without edit access.",
       });
-      void router.replace("/dashboard");
+      void router.replace(tenantHref("/dashboard"));
       return;
     }
     if (currentNavItem) {
@@ -103,10 +108,10 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
         toast.error("Access Denied", {
           description: "You do not have permission to access this module.",
         });
-        void router.replace("/dashboard");
+        void router.replace(tenantHref("/dashboard"));
       }
     }
-  }, [authReady, sessionChecked, isAuthenticated, user, currentNavItem, pathname, router]);
+  }, [authReady, sessionChecked, isAuthenticated, user, currentNavItem, appPath, router, tenantHref]);
 
   const runBootstrap = useAppBootstrapStore((s) => s.run);
   const resetBootstrap = useAppBootstrapStore((s) => s.reset);
@@ -151,46 +156,48 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   }
 
   return (
-    <div className="fixed inset-0 z-0 flex flex-col overflow-hidden bg-background">
-      <Sidebar />
-      <div
-        className={cn(
-          "flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden pl-0 transition-[padding] duration-300",
-          sidebarCollapsed ? "md:pl-0" : "md:pl-[260px]"
-        )}
-      >
-        <Header />
-        <SubscriptionRenewBanner />
-        <main
-          ref={mainScrollRef}
-          className="min-h-0 min-w-0 flex-1 overflow-y-auto overflow-x-hidden p-4 pb-[calc(4.5rem+env(safe-area-inset-bottom))] md:p-6 md:pb-6 md:[scrollbar-gutter:stable]"
-          style={{ WebkitOverflowScrolling: "touch" }}
+    <TenantGuard mode="staff">
+      <div className="fixed inset-0 z-0 flex flex-col overflow-hidden bg-background">
+        <Sidebar />
+        <div
+          className={cn(
+            "flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden pl-0 transition-[padding] duration-300",
+            sidebarCollapsed ? "md:pl-0" : "md:pl-[260px]"
+          )}
         >
-          {bootstrapError ? (
-            <div
-              role="alert"
-              className="mb-4 rounded-lg border border-destructive/40 bg-destructive/5 px-4 py-3 text-sm"
-            >
-              <p className="font-medium text-destructive">Could not load data from the API</p>
-              <p className="mt-1 text-muted-foreground">{bootstrapError}</p>
-              <Button
-                type="button"
-                variant="outline"
-                size="sm"
-                className="mt-3"
-                onClick={() => void runBootstrap()}
+          <Header />
+          <SubscriptionRenewBanner />
+          <main
+            ref={mainScrollRef}
+            className="min-h-0 min-w-0 flex-1 overflow-y-auto overflow-x-hidden p-4 pb-[calc(4.5rem+env(safe-area-inset-bottom))] md:p-6 md:pb-6 md:[scrollbar-gutter:stable]"
+            style={{ WebkitOverflowScrolling: "touch" }}
+          >
+            {bootstrapError ? (
+              <div
+                role="alert"
+                className="mb-4 rounded-lg border border-destructive/40 bg-destructive/5 px-4 py-3 text-sm"
               >
-                Retry
-              </Button>
-            </div>
-          ) : null}
-          <AppDataSync />
-          <DomainDataSync />
-          {children}
-        </main>
-        <ScrollToTopButton scrollContainerRef={mainScrollRef} />
-        <MobileBottomNav />
+                <p className="font-medium text-destructive">Could not load data from the API</p>
+                <p className="mt-1 text-muted-foreground">{bootstrapError}</p>
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  className="mt-3"
+                  onClick={() => void runBootstrap()}
+                >
+                  Retry
+                </Button>
+              </div>
+            ) : null}
+            <AppDataSync />
+            <DomainDataSync />
+            {children}
+          </main>
+          <ScrollToTopButton scrollContainerRef={mainScrollRef} />
+          <MobileBottomNav />
+        </div>
       </div>
-    </div>
+    </TenantGuard>
   );
 }

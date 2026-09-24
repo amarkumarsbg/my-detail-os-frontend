@@ -13,17 +13,22 @@ import { LogOut, Home, FileText, Car, ClipboardList, User, Trophy, Wallet, Share
 import { useTheme } from "next-themes";
 import Link from "next/link";
 import { cn } from "@/lib/utils";
+import { stripOrgSlugFromPath } from "@/lib/tenant";
+import { useTenantPath } from "@/components/tenant/tenant-context";
+import { TenantGuard } from "@/components/tenant/tenant-guard";
 
 export default function CustomerLayout({ children }: { children: React.ReactNode }) {
   const router = useRouter();
   const pathname = usePathname();
+  const appPath = stripOrgSlugFromPath(pathname);
+  const tenantHref = useTenantPath();
   const [ready, setReady] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
   const { isAuthenticated, user, logout, ensureValidSession } = useCustomerAuthStore();
   const { bootstrap, customer, isLoading, refresh } = useCustomerDashboardStore();
   const sessionValidatedRef = useRef(false);
-  const businessName = useSettingsStore((s) => s.businessName) || "Prime Detailers";
+  const businessName = useSettingsStore((s) => s.businessName) || "MY DETAIL OS";
   const businessLogo = useSettingsStore((s) => s.businessLogo);
   const logoUrl = resolveUploadsPublicUrl(businessLogo);
   const customerAvatarSrc = resolveUploadsPublicUrl(customer?.avatar ?? user?.avatar ?? undefined);
@@ -51,7 +56,7 @@ export default function CustomerLayout({ children }: { children: React.ReactNode
   }, []);
 
   // Check if we're on the login page (no auth required)
-  const isLoginPage = pathname === "/customer/login";
+  const isLoginPage = appPath === "/customer/login";
 
   // Check session and bootstrap data
   useEffect(() => {
@@ -61,7 +66,7 @@ export default function CustomerLayout({ children }: { children: React.ReactNode
     if (isLoginPage) return;
 
     if (!isAuthenticated) {
-      router.replace("/customer/login");
+      router.replace(tenantHref("/customer/login"));
       return;
     }
 
@@ -73,7 +78,7 @@ export default function CustomerLayout({ children }: { children: React.ReactNode
 
     // Bootstrap dashboard data
     void bootstrap();
-  }, [ready, isAuthenticated, user, router, ensureValidSession, bootstrap, isLoginPage, sessionValidatedRef]);
+  }, [ready, isAuthenticated, user, router, ensureValidSession, bootstrap, isLoginPage, sessionValidatedRef, tenantHref]);
 
   // Real-time refresh: poll frequently + re-fetch on tab focus/visibility
   const refreshRef = useRef(bootstrap);
@@ -119,7 +124,7 @@ export default function CustomerLayout({ children }: { children: React.ReactNode
 
   const handleLogout = () => {
     logout();
-    router.replace("/customer/login");
+    router.replace(tenantHref("/customer/login"));
   };
 
   // Mobile bottom nav
@@ -161,10 +166,11 @@ export default function CustomerLayout({ children }: { children: React.ReactNode
 
   // For login page, render without header/nav
   if (isLoginPage) {
-    return <>{children}</>;
+    return <TenantGuard mode="customer">{children}</TenantGuard>;
   }
 
   return (
+    <TenantGuard mode="customer">
     <div className="h-screen bg-background flex flex-col overflow-hidden">
       {/* Header — matches staff dashboard header pattern */}
       <header className="shrink-0 z-30 border-b border-border bg-background h-16 flex items-center px-4 md:pl-68 md:pr-6">
@@ -172,7 +178,7 @@ export default function CustomerLayout({ children }: { children: React.ReactNode
           {/* Left: current page title */}
           <div className="flex items-center gap-3 min-w-0">
             <Link
-              href="/customer/dashboard"
+              href={tenantHref("/customer/dashboard")}
               className="h-8 w-8 rounded-lg bg-primary flex items-center justify-center md:hidden shrink-0 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30"
               aria-label="Go to customer home"
             >
@@ -180,19 +186,19 @@ export default function CustomerLayout({ children }: { children: React.ReactNode
             </Link>
             <h1 className="text-xl font-bold tracking-tight text-foreground truncate">
               {(() => {
-                if (pathname === "/customer/dashboard") return "Dashboard";
-                if (pathname === "/customer/jobs") return "My Jobs";
-                if (pathname.startsWith("/customer/jobs/")) return "Job Details";
-                if (pathname === "/customer/invoices") return "Billing";
-                if (pathname.startsWith("/customer/invoices/")) return "Invoice";
-                if (pathname === "/customer/vehicles") return "My Vehicles";
-                if (pathname === "/customer/more") return "More";
-                if (pathname === "/customer/more/profile") return "My Profile";
-                if (pathname === "/customer/more/change-password") return "Change Password";
-                if (pathname === "/customer/more/rewards") return "Reward Points";
-                if (pathname === "/customer/more/wallet") return "Wallet";
-                if (pathname === "/customer/more/referral") return "Referral Code";
-                if (pathname === "/customer/more/memberships") return "Memberships";
+                if (appPath === "/customer/dashboard") return "Dashboard";
+                if (appPath === "/customer/jobs") return "My Jobs";
+                if (appPath.startsWith("/customer/jobs/")) return "Job Details";
+                if (appPath === "/customer/invoices") return "Billing";
+                if (appPath.startsWith("/customer/invoices/")) return "Invoice";
+                if (appPath === "/customer/vehicles") return "My Vehicles";
+                if (appPath === "/customer/more") return "More";
+                if (appPath === "/customer/more/profile") return "My Profile";
+                if (appPath === "/customer/more/change-password") return "Change Password";
+                if (appPath === "/customer/more/rewards") return "Reward Points";
+                if (appPath === "/customer/more/wallet") return "Wallet";
+                if (appPath === "/customer/more/referral") return "Referral Code";
+                if (appPath === "/customer/more/memberships") return "Memberships";
                 return "Customer Portal";
               })()}
             </h1>
@@ -252,11 +258,11 @@ export default function CustomerLayout({ children }: { children: React.ReactNode
         <div className="flex items-center justify-around h-16">
           {mobileNavItems.map((item) => {
             const Icon = item.icon;
-            const isActive = pathname === item.href || pathname.startsWith(item.href + "/");
+            const isActive = appPath === item.href || appPath.startsWith(item.href + "/");
             return (
               <Link
                 key={item.href}
-                href={item.href}
+                href={tenantHref(item.href)}
                 className={cn(
                   "flex flex-col items-center justify-center gap-1 px-4 py-2 text-xs font-medium transition-colors",
                   isActive ? "text-primary" : "text-muted-foreground hover:text-foreground"
@@ -298,7 +304,7 @@ export default function CustomerLayout({ children }: { children: React.ReactNode
         <div className="flex items-center justify-between h-16 px-4 border-b border-sidebar-border shrink-0 box-border">
           <div className="flex items-center gap-3 min-w-0">
             <Link
-              href="/customer/dashboard"
+              href={tenantHref("/customer/dashboard")}
               onClick={() => setMobileMenuOpen(false)}
               className="rounded-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30"
               aria-label="Go to customer home"
@@ -335,11 +341,11 @@ export default function CustomerLayout({ children }: { children: React.ReactNode
               </p>
               {section.items.map((item) => {
                 const Icon = item.icon;
-                const isActive = pathname === item.href || pathname.startsWith(item.href + "/");
+                const isActive = appPath === item.href || appPath.startsWith(item.href + "/");
                 return (
                   <Link
                     key={item.href}
-                    href={item.href}
+                    href={tenantHref(item.href)}
                     onClick={() => setMobileMenuOpen(false)}
                     className={cn(
                       "group flex items-center gap-2.5 rounded-xl px-3 py-2.5 text-[13px] font-medium origin-left",
@@ -396,7 +402,7 @@ export default function CustomerLayout({ children }: { children: React.ReactNode
       <aside className="hidden md:flex fixed left-0 top-0 h-screen w-64 bg-sidebar border-r border-sidebar-border flex-col z-40">
         {/* Brand header — company name + logo like staff sidebar */}
         <Link
-          href="/customer/dashboard"
+          href={tenantHref("/customer/dashboard")}
           className="flex items-center gap-3 h-16 px-4 shrink-0 border-b border-sidebar-border rounded-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30"
         >
           {logoUrl ? (
@@ -421,11 +427,11 @@ export default function CustomerLayout({ children }: { children: React.ReactNode
               </p>
               {section.items.map((item) => {
                 const Icon = item.icon;
-                const isActive = pathname === item.href || pathname.startsWith(item.href + "/");
+                const isActive = appPath === item.href || appPath.startsWith(item.href + "/");
                 return (
                   <Link
                     key={item.href}
-                    href={item.href}
+                    href={tenantHref(item.href)}
                     className={cn(
                       "group flex items-center gap-2.5 rounded-xl px-3 py-2.5 text-[13px] font-medium origin-left",
                       "translate-x-0 scale-100 transform-gpu transition-[color,background-color,transform,box-shadow] duration-200 ease-out",
@@ -475,5 +481,6 @@ export default function CustomerLayout({ children }: { children: React.ReactNode
       </aside>
 
     </div>
+    </TenantGuard>
   );
 }

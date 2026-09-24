@@ -11,6 +11,7 @@ import { Eye, EyeOff, Lock, Smartphone, AlertCircle } from "lucide-react";
 import { toast } from "sonner";
 import { apiGet } from "@/lib/api-client";
 import { resolveUploadsPublicUrl } from "@/lib/api-base";
+import { useTenantPath, useTenantSlug } from "@/components/tenant/tenant-context";
 
 type PublicBranding = {
   businessName: string;
@@ -20,6 +21,8 @@ type PublicBranding = {
 
 export default function CustomerLoginPage() {
   const router = useRouter();
+  const orgSlug = useTenantSlug();
+  const tenantHref = useTenantPath();
   const { login, isAuthenticated } = useCustomerAuthStore();
 
   const [phone, setPhone] = useState("");
@@ -30,52 +33,52 @@ export default function CustomerLoginPage() {
   const [branding, setBranding] = useState<PublicBranding | null>(null);
 
   useEffect(() => {
-    // If already logged in, redirect to dashboard
     if (isAuthenticated) {
-      router.replace("/customer/dashboard");
+      router.replace(tenantHref("/customer/dashboard"));
     }
-  }, [isAuthenticated, router]);
+  }, [isAuthenticated, router, tenantHref]);
 
   useEffect(() => {
-    // Load branding
     let cancelled = false;
-    void apiGet<PublicBranding>("/api/public/branding")
+    const path = orgSlug
+      ? `/api/public/branding?slug=${encodeURIComponent(orgSlug)}`
+      : "/api/public/branding";
+    void apiGet<PublicBranding>(path)
       .then((data) => {
         if (!cancelled) setBranding(data);
       })
       .catch(() => {
-        // Keep default if API fails
+        /* Keep default if API fails */
       });
     return () => {
       cancelled = true;
     };
-  }, []);
+  }, [orgSlug]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError("");
     setLoading(true);
 
-    const result = await login(phone, password);
+    const result = await login(phone, password, orgSlug);
     setLoading(false);
 
     if (result.ok) {
       toast.success("Login successful");
-      router.replace("/customer/dashboard");
+      router.replace(tenantHref("/customer/dashboard"));
     } else {
       setError(result.message);
       toast.error(result.message);
     }
   };
 
-  const businessName = branding?.businessName?.trim() || "Prime Detailers";
+  const businessName = branding?.businessName?.trim() || "MY DETAIL OS";
   const logoUrl = branding?.businessLogo ? resolveUploadsPublicUrl(branding.businessLogo) : null;
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-teal-50 via-white to-cyan-50 dark:from-slate-950 dark:via-slate-900 dark:to-slate-950 flex items-center justify-center p-4">
       <Card className="w-full max-w-md">
         <CardHeader className="space-y-4">
-          {/* Brand */}
           <div className="flex items-center justify-center mb-2">
             {logoUrl ? (
               // eslint-disable-next-line @next/next/no-img-element
@@ -97,6 +100,11 @@ export default function CustomerLoginPage() {
             <p className="text-xs text-muted-foreground">
               Sign in with your phone number and password
             </p>
+            {!orgSlug ? (
+              <p className="text-xs text-amber-700 dark:text-amber-400">
+                Open your workshop&apos;s customer portal link (/{`{workshop}`}/customer/login) to sign in.
+              </p>
+            ) : null}
           </div>
         </CardHeader>
 
@@ -109,7 +117,6 @@ export default function CustomerLoginPage() {
               </div>
             )}
 
-            {/* Phone Input */}
             <div className="space-y-2">
               <Label htmlFor="phone" className="text-sm font-medium">
                 Mobile Number
@@ -132,7 +139,6 @@ export default function CustomerLoginPage() {
               </div>
             </div>
 
-            {/* Password Input */}
             <div className="space-y-2">
               <Label htmlFor="password" className="text-sm font-medium">
                 Password
@@ -162,12 +168,11 @@ export default function CustomerLoginPage() {
               </div>
             </div>
 
-            {/* Submit Button */}
             <Button
               type="submit"
               className="w-full"
               size="lg"
-              disabled={loading || !phone || !password}
+              disabled={loading || !phone || !password || !orgSlug}
             >
               {loading ? (
                 <>

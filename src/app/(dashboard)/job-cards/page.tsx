@@ -291,7 +291,7 @@ export default function JobCardsPage() {
     const invoices = useInvoiceStore.getState().invoices;
     const invoice = invoices.find((inv) => inv.jobCardId === jc.id);
     const buildOpts = {
-      businessName: businessName || "Prime Detailers",
+      businessName: businessName || "MY DETAIL OS",
       invoiceNumber: invoice ? invoice.invoiceNumber : null,
       customerLoginUrl: typeof window !== "undefined" ? window.location.origin : null,
       customerPhotosLink: jc.secureToken ? `${typeof window !== "undefined" ? window.location.origin : ""}/customer/job-card/${jc.secureToken}/photos` : null,
@@ -1013,7 +1013,7 @@ export default function JobCardsPage() {
                                       const token = (jc as any).secureToken;
                                       if (token) {
                                         const link = `${window.location.origin}/customer/job-card/${token}/photos`;
-                                        const bizName = useSettingsStore.getState().businessName || "Prime Detailers";
+                                        const bizName = useSettingsStore.getState().businessName || "MY DETAIL OS";
                                         const message = buildJobCardPhotosWhatsAppMessage({
                                           customerName: jc.customerName,
                                           jobCardNumber: jc.jobNumber,

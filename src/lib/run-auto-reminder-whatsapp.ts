@@ -155,7 +155,7 @@ async function runClientSideAutoSends(opts?: {
         ? buildPaymentPendingReminderWhatsAppMessage({
             pendingAmount: paymentOutstandingForReminder(latest, getOutstanding),
             statementUrl: publicCustomerLedgerShareUrl(latest.customerId),
-            businessName: businessName || "Prime Detailers",
+            businessName: businessName || "MY DETAIL OS",
             mode: "singleInvoice",
             invoiceUrl: latest.invoiceId ? publicInvoiceShareUrl(latest.invoiceId) : undefined,
             invoiceNumber: latest.invoiceNumber,

@@ -22,9 +22,9 @@ export default function ReferralPage() {
 
   const shareCode = () => {
     if (!referralCode) return;
-    const message = `Use my referral code ${referralCode} at Prime Detailers and get exclusive rewards! Book your service today.`;
+    const message = `Use my referral code ${referralCode} at MY DETAIL OS and get exclusive rewards! Book your service today.`;
     if (navigator.share) {
-      void navigator.share({ title: "Prime Detailers Referral", text: message });
+      void navigator.share({ title: "MY DETAIL OS Referral", text: message });
     } else {
       copyCode();
     }

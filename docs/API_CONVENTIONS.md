@@ -1,6 +1,6 @@
 # API conventions
 
-Prime Detailers Express API (`backend/`). Base URL local: `http://localhost:4000`.
+MY DETAIL OS Express API (`backend/`). Base URL local: `http://localhost:4000`.
 
 ## Response envelope
 

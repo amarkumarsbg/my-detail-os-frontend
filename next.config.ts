@@ -21,11 +21,13 @@ const nextConfig: NextConfig = {
     const marketing =
       process.env.NEXT_PUBLIC_MARKETING_SITE_URL?.replace(/\/$/, "") ||
       (process.env.NODE_ENV === "production"
-        ? "https://www.primedetailers.com"
+        ? "https://www.mydetailos.com"
         : "http://localhost:3003");
     return [
       { source: "/signup", destination: `${marketing}/signup`, permanent: false },
       { source: "/register", destination: `${marketing}/signup`, permanent: false },
+      { source: "/pricing", destination: `${marketing}/pricing`, permanent: false },
+      { source: "/features", destination: `${marketing}/features`, permanent: false },
     ];
   },
   async rewrites() {
