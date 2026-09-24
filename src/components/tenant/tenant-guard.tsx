@@ -156,11 +156,7 @@ export function TenantGuard({ children, mode = "staff" }: TenantGuardProps) {
   }
 
   if (state.status === "loading") {
-    return (
-      <div className="min-h-screen flex items-center justify-center">
-        <div className="w-6 h-6 border-2 border-primary border-t-transparent rounded-full animate-spin" />
-      </div>
-    );
+    return <div className="min-h-screen bg-slate-950" aria-busy="true" aria-label="Loading" />;
   }
 
   if (state.status === "not_found") {
@@ -202,11 +198,7 @@ export function TenantGuard({ children, mode = "staff" }: TenantGuardProps) {
   // Staff: wait for bootstrap to settle so mismatch redirect can run
   // without flashing wrong-org content (still render if bootstrap failed).
   if (mode === "staff" && !bootstrapReady && !bootstrapError) {
-    return (
-      <div className="min-h-screen flex items-center justify-center">
-        <div className="w-6 h-6 border-2 border-primary border-t-transparent rounded-full animate-spin" />
-      </div>
-    );
+    return <div className="min-h-screen bg-slate-950" aria-busy="true" aria-label="Loading" />;
   }
 
   return <>{children}</>;

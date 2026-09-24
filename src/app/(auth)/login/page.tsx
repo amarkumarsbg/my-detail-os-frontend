@@ -43,7 +43,7 @@ function LoginHandoffPage() {
   const searchParams = useSearchParams();
   const pathname = usePathname();
   const applyAuthPayload = useAuthStore((s) => s.applyAuthPayload);
-  const [message, setMessage] = useState("Opening your workshop…");
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     const { token, next } = readHandoffFromLocation(searchParams);
@@ -69,7 +69,6 @@ function LoginHandoffPage() {
         };
         if (cancelled) return;
         if (!res.ok || body.error || !body.data) {
-          setMessage("Session expired. Redirecting to sign in…");
           goToMarketingLogin();
           return;
         }
@@ -84,17 +83,15 @@ function LoginHandoffPage() {
             data?: { id: string; slug: string; isActive: boolean } | null;
           };
           if (!orgRes.ok || !orgBody.data) {
-            setMessage("Workshop not found. Redirecting…");
             goToMarketingLogin();
             return;
           }
           if (!orgBody.data.isActive) {
-            setMessage("This workshop is inactive.");
+            setError("This workshop is inactive.");
             return;
           }
           const userOrgId = body.data.user.organizationId;
           if (userOrgId && userOrgId !== orgBody.data.id) {
-            setMessage("You are signed in to a different workshop. Redirecting…");
             goToMarketingLogin();
             return;
           }
@@ -119,7 +116,6 @@ function LoginHandoffPage() {
         window.location.replace(dest);
       } catch {
         if (!cancelled) {
-          setMessage("Could not complete sign-in. Redirecting…");
           goToMarketingLogin();
         }
       }
@@ -131,30 +127,28 @@ function LoginHandoffPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  return (
-    <div className="min-h-screen flex flex-col items-center justify-center bg-linear-to-br from-slate-50 via-white to-teal-50/40 dark:from-slate-950 dark:via-slate-900 dark:to-slate-950 px-6">
-      <div className="flex flex-col items-center gap-4 text-center max-w-sm">
-        <div className="h-11 w-11 rounded-full border-2 border-teal-600/30 border-t-teal-600 animate-spin" />
-        <div className="space-y-1.5">
-          <p className="text-lg font-semibold tracking-tight text-foreground">{message}</p>
-          <p className="text-sm text-muted-foreground">
-            Staff sign-in is handled on the MY DETAIL OS website.
-          </p>
-        </div>
+  if (error) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-slate-50 px-6">
+        <p className="text-sm text-slate-600">{error}</p>
       </div>
-    </div>
+    );
+  }
+
+  return (
+    <div
+      className="min-h-screen bg-slate-950"
+      role="status"
+      aria-live="polite"
+      aria-busy="true"
+      aria-label="Loading"
+    />
   );
 }
 
 export default function LoginPage() {
   return (
-    <Suspense
-      fallback={
-        <div className="min-h-screen flex items-center justify-center">
-          <div className="h-11 w-11 rounded-full border-2 border-teal-600/30 border-t-teal-600 animate-spin" />
-        </div>
-      }
-    >
+    <Suspense fallback={<div className="min-h-screen bg-slate-950" />}>
       <LoginHandoffPage />
     </Suspense>
   );

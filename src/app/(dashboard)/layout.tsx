@@ -140,19 +140,11 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   }, [bootstrapError]);
 
   if (!authReady || !sessionChecked || !isAuthenticated) {
-    return (
-      <div className="min-h-screen flex items-center justify-center">
-        <div className="w-6 h-6 border-2 border-primary border-t-transparent rounded-full animate-spin" />
-      </div>
-    );
+    return <div className="min-h-screen bg-slate-950" aria-busy="true" aria-label="Loading" />;
   }
 
   if (mustChangePassword) {
-    return (
-      <div className="min-h-screen flex items-center justify-center">
-        <div className="w-6 h-6 border-2 border-primary border-t-transparent rounded-full animate-spin" />
-      </div>
-    );
+    return <div className="min-h-screen bg-slate-950" aria-busy="true" aria-label="Loading" />;
   }
 
   return (
