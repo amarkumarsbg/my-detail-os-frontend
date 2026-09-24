@@ -9,7 +9,7 @@ import { resolveUploadsPublicUrl } from "@/lib/api-base";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { useSidebarStore } from "@/store/sidebar-store";
 import { useAuthStore } from "@/store/auth-store";
-import { goToMarketingHome } from "@/lib/marketing-site";
+import { goToMarketingAfterLogout } from "@/lib/marketing-site";
 import { useDashboardFilterStore } from "@/store/dashboard-filter-store";
 import { useSettingsStore } from "@/store/settings-store";
 import { useAppointmentStore } from "@/store/appointment-store";
@@ -268,7 +268,7 @@ export function Sidebar() {
   const handleMobileLogout = () => {
     logout();
     setMobileOpen(false);
-    goToMarketingHome();
+    goToMarketingAfterLogout();
   };
 
   const brandHeader = (onClick?: () => void) => (

@@ -1,8 +1,16 @@
 /**
- * Public marketing website (MY DETAIL OS / mydetailos).
+ * Public marketing website (MY DETAIL OS).
  * Staff login / signup / logout land here — not on the workshop app.
  * Override with NEXT_PUBLIC_MARKETING_SITE_URL when needed.
+ *
+ * Production default uses the Vercel marketing deployment so logout/login
+ * keep working when custom domains (e.g. mydetailos.com) are blocked by
+ * corporate filters or not yet live.
  */
+
+/** Reachable public marketing origin used for demos / Vercel production. */
+const DEFAULT_PRODUCTION_MARKETING_URL =
+  "https://prime-detailers-website.vercel.app";
 
 function trimSlash(url: string): string {
   return url.replace(/\/$/, "");
@@ -15,7 +23,7 @@ export function marketingSiteUrl(): string {
   if (process.env.NODE_ENV !== "production") {
     return "http://localhost:3003";
   }
-  return "https://www.mydetailos.com";
+  return DEFAULT_PRODUCTION_MARKETING_URL;
 }
 
 export function marketingLoginUrl(): string {
@@ -44,4 +52,9 @@ export function goToMarketingLogin(): void {
 export function goToMarketingHome(): void {
   if (typeof window === "undefined") return;
   window.location.assign(marketingHomeUrl());
+}
+
+/** Prefer login after staff logout so users can sign back in immediately. */
+export function goToMarketingAfterLogout(): void {
+  goToMarketingLogin();
 }

@@ -21,7 +21,7 @@ const nextConfig: NextConfig = {
     const marketing =
       process.env.NEXT_PUBLIC_MARKETING_SITE_URL?.replace(/\/$/, "") ||
       (process.env.NODE_ENV === "production"
-        ? "https://www.mydetailos.com"
+        ? "https://prime-detailers-website.vercel.app"
         : "http://localhost:3003");
     return [
       { source: "/signup", destination: `${marketing}/signup`, permanent: false },
