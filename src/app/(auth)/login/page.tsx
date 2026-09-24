@@ -6,6 +6,7 @@ import { useAuthStore } from "@/store/auth-store";
 import { buildApiUrl } from "@/lib/api-base";
 import { goToMarketingLogin } from "@/lib/marketing-site";
 import { parseOrgSlugFromPathname, tenantPath } from "@/lib/tenant";
+import { BootOverlay } from "@/components/shared/boot-overlay";
 
 /**
  * Staff login UI lives on the public marketing website.
@@ -135,20 +136,12 @@ function LoginHandoffPage() {
     );
   }
 
-  return (
-    <div
-      className="min-h-screen bg-slate-950"
-      role="status"
-      aria-live="polite"
-      aria-busy="true"
-      aria-label="Loading"
-    />
-  );
+  return <BootOverlay />;
 }
 
 export default function LoginPage() {
   return (
-    <Suspense fallback={<div className="min-h-screen bg-slate-950" />}>
+    <Suspense fallback={<BootOverlay />}>
       <LoginHandoffPage />
     </Suspense>
   );

@@ -7,6 +7,7 @@ import { goToMarketingLogin } from "@/lib/marketing-site";
 import { useOrganizationStore } from "@/store/organization-store";
 import { useAppBootstrapStore } from "@/store/app-bootstrap-store";
 import { useTenantSlug } from "@/components/tenant/tenant-context";
+import { BootOverlay } from "@/components/shared/boot-overlay";
 
 type PublicOrgBySlug = {
   id: string;
@@ -156,7 +157,7 @@ export function TenantGuard({ children, mode = "staff" }: TenantGuardProps) {
   }
 
   if (state.status === "loading") {
-    return <div className="min-h-screen bg-slate-950" aria-busy="true" aria-label="Loading" />;
+    return <BootOverlay />;
   }
 
   if (state.status === "not_found") {
@@ -198,7 +199,7 @@ export function TenantGuard({ children, mode = "staff" }: TenantGuardProps) {
   // Staff: wait for bootstrap to settle so mismatch redirect can run
   // without flashing wrong-org content (still render if bootstrap failed).
   if (mode === "staff" && !bootstrapReady && !bootstrapError) {
-    return <div className="min-h-screen bg-slate-950" aria-busy="true" aria-label="Loading" />;
+    return <BootOverlay />;
   }
 
   return <>{children}</>;

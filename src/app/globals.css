@@ -213,3 +213,122 @@ input[type="number"] {
   0% { transform: translateX(-100%); }
   100% { transform: translateX(100%); }
 }
+
+/* Auth/bootstrap handoff — diamond orbit (matches marketing site) */
+.workshop-orbit {
+  position: relative;
+  width: 88px;
+  height: 88px;
+}
+
+.workshop-orbit__ring {
+  position: absolute;
+  inset: 0;
+  border-radius: 50%;
+  border: 1.5px solid transparent;
+}
+
+.workshop-orbit__ring--outer {
+  border-top-color: #f59e0b;
+  border-right-color: rgba(245, 158, 11, 0.25);
+  animation: workshop-spin 1.35s cubic-bezier(0.55, 0.15, 0.35, 0.95) infinite;
+}
+
+.workshop-orbit__ring--mid {
+  inset: 10px;
+  border-bottom-color: #14b8a6;
+  border-left-color: rgba(20, 184, 166, 0.3);
+  animation: workshop-spin-rev 1.8s cubic-bezier(0.45, 0.05, 0.55, 0.95) infinite;
+}
+
+.workshop-orbit__diamond {
+  position: absolute;
+  inset: 26px;
+  display: grid;
+  place-items: center;
+  border-radius: 6px;
+  background: linear-gradient(145deg, #fbbf24 0%, #f97316 55%, #ea580c 100%);
+  transform: rotate(45deg);
+  box-shadow:
+    0 0 0 1px rgba(255, 255, 255, 0.12),
+    0 8px 24px rgba(249, 115, 22, 0.35);
+  animation: workshop-pulse 1.6s ease-in-out infinite;
+}
+
+.workshop-orbit__core {
+  width: 10px;
+  height: 10px;
+  border-radius: 999px;
+  background: #0f172a;
+  transform: rotate(-45deg);
+  box-shadow: 0 0 0 3px rgba(15, 23, 42, 0.35);
+}
+
+.workshop-orbit__dot {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 7px;
+  height: 7px;
+  margin: -3.5px;
+  border-radius: 999px;
+}
+
+.workshop-orbit__dot--a {
+  background: #fbbf24;
+  animation: workshop-orbit-dot 1.35s linear infinite;
+}
+
+.workshop-orbit__dot--b {
+  background: #2dd4bf;
+  animation: workshop-orbit-dot 1.35s linear infinite;
+  animation-delay: -0.45s;
+}
+
+.workshop-orbit__dot--c {
+  background: #38bdf8;
+  animation: workshop-orbit-dot 1.35s linear infinite;
+  animation-delay: -0.9s;
+}
+
+@keyframes workshop-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@keyframes workshop-spin-rev {
+  to {
+    transform: rotate(-360deg);
+  }
+}
+
+@keyframes workshop-pulse {
+  0%,
+  100% {
+    transform: rotate(45deg) scale(1);
+    filter: brightness(1);
+  }
+  50% {
+    transform: rotate(45deg) scale(0.92);
+    filter: brightness(1.12);
+  }
+}
+
+@keyframes workshop-orbit-dot {
+  from {
+    transform: rotate(0deg) translateX(40px) rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg) translateX(40px) rotate(-360deg);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .workshop-orbit__ring--outer,
+  .workshop-orbit__ring--mid,
+  .workshop-orbit__diamond,
+  .workshop-orbit__dot {
+    animation: none !important;
+  }
+}

@@ -22,6 +22,7 @@ import { goToMarketingLogin } from "@/lib/marketing-site";
 import { stripOrgSlugFromPath } from "@/lib/tenant";
 import { useTenantPath } from "@/components/tenant/tenant-context";
 import { TenantGuard } from "@/components/tenant/tenant-guard";
+import { BootOverlay } from "@/components/shared/boot-overlay";
 
 export default function DashboardLayout({ children }: { children: React.ReactNode }) {
   const isAuthenticated = useAuthStore((s) => s.isAuthenticated);
@@ -140,11 +141,11 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   }, [bootstrapError]);
 
   if (!authReady || !sessionChecked || !isAuthenticated) {
-    return <div className="min-h-screen bg-slate-950" aria-busy="true" aria-label="Loading" />;
+    return <BootOverlay />;
   }
 
   if (mustChangePassword) {
-    return <div className="min-h-screen bg-slate-950" aria-busy="true" aria-label="Loading" />;
+    return <BootOverlay />;
   }
 
   return (
