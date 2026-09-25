@@ -1,6 +1,7 @@
 "use client";
 
-import { useEffect, useState, type ReactNode } from "react";
+import { useCallback, useEffect, useRef, useState, type ReactNode } from "react";
+import { usePathname } from "next/navigation";
 import { toast } from "sonner";
 import { Mail, Phone, Unplug } from "lucide-react";
 import { buildApiUrl } from "@/lib/api-base";
@@ -17,6 +18,9 @@ import { BootOverlay } from "@/components/shared/boot-overlay";
 
 const SUPPORT_EMAIL =
   process.env.NEXT_PUBLIC_SUPPORT_EMAIL?.trim() || "support@mydetailos.com";
+
+/** Re-check public org status without waiting for a hard refresh. */
+const ORG_STATUS_POLL_MS = 10_000;
 
 type PublicOrgBySlug = {
   id: string;
@@ -64,6 +68,10 @@ async function prefetchBranding(slug: string): Promise<void> {
   } catch {
     /* ignore */
   }
+}
+
+function isOrgBlocked(org: PublicOrgBySlug): boolean {
+  return !org.isActive || org.subscriptionStatus === "CANCELLED";
 }
 
 function FriendlyMessage({
@@ -154,58 +162,108 @@ function FriendlyMessage({
  */
 export function TenantGuard({ children, mode = "staff" }: TenantGuardProps) {
   const orgSlug = useTenantSlug();
+  const pathname = usePathname();
   const entitlement = useOrganizationStore((s) => s.entitlement);
   const bootstrapReady = useAppBootstrapStore((s) => s.ready);
   const bootstrapError = useAppBootstrapStore((s) => s.error);
   const [state, setState] = useState<GuardState>(
     orgSlug ? { status: "loading" } : { status: "skip" }
   );
+  const stateRef = useRef(state);
+  stateRef.current = state;
 
-  useEffect(() => {
-    if (!orgSlug) {
-      setState({ status: "skip" });
+  const applyOrg = useCallback((org: PublicOrgBySlug | null, soft: boolean) => {
+    if (!org) {
+      setState({ status: "not_found" });
       return;
     }
+    if (isOrgBlocked(org)) {
+      setState({ status: "inactive", org });
+      return;
+    }
+    if (soft && stateRef.current.status === "ok" && stateRef.current.org.id === org.id) {
+      setState({ status: "ok", org });
+      return;
+    }
+    setState({ status: "ok", org });
+  }, []);
 
-    let cancelled = false;
-    setState({ status: "loading" });
-
-    void (async () => {
+  const revalidate = useCallback(
+    async (opts?: { soft?: boolean; prefetch?: boolean }) => {
+      const soft = opts?.soft === true;
+      const slug = orgSlug;
+      if (!slug) {
+        setState({ status: "skip" });
+        return;
+      }
+      if (!soft) setState({ status: "loading" });
       try {
-        const [org] = await Promise.all([
-          fetchOrgBySlug(orgSlug),
-          prefetchBranding(orgSlug),
-        ]);
-        if (cancelled) return;
-        if (!org) {
-          setState({ status: "not_found" });
-          return;
-        }
-        if (!org.isActive || org.subscriptionStatus === "CANCELLED") {
-          setState({ status: "inactive", org });
-          return;
-        }
-        setState({ status: "ok", org });
+        const tasks: Promise<unknown>[] = [fetchOrgBySlug(slug)];
+        if (opts?.prefetch) tasks.push(prefetchBranding(slug));
+        const [org] = (await Promise.all(tasks)) as [PublicOrgBySlug | null];
+        applyOrg(org, soft);
       } catch (e) {
-        if (cancelled) return;
+        if (soft && stateRef.current.status === "ok") return;
         setState({
           status: "error",
           message: e instanceof Error ? e.message : "Could not verify organization",
         });
       }
-    })();
+    },
+    [orgSlug, applyOrg]
+  );
+
+  // Initial + slug change
+  useEffect(() => {
+    void revalidate({ soft: false, prefetch: true });
+  }, [revalidate]);
+
+  // Soft nav within the same org (SPA) — re-check without hard refresh
+  useEffect(() => {
+    if (!orgSlug) return;
+    void revalidate({ soft: true });
+  }, [pathname, orgSlug, revalidate]);
+
+  // Tab focus / poll — catch suspend while the tab stays open
+  useEffect(() => {
+    if (!orgSlug) return;
+
+    const onVisible = () => {
+      if (document.visibilityState === "visible") void revalidate({ soft: true });
+    };
+    document.addEventListener("visibilitychange", onVisible);
+
+    const id = window.setInterval(() => {
+      if (document.visibilityState !== "visible") return;
+      if (stateRef.current.status === "inactive") return;
+      void revalidate({ soft: true });
+    }, ORG_STATUS_POLL_MS);
 
     return () => {
-      cancelled = true;
+      document.removeEventListener("visibilitychange", onVisible);
+      window.clearInterval(id);
     };
-  }, [orgSlug]);
+  }, [orgSlug, revalidate]);
+
+  // Bootstrap entitlement can learn CANCELLED before the next public poll
+  useEffect(() => {
+    if (state.status !== "ok") return;
+    if (entitlement?.subscription?.status !== "CANCELLED") return;
+    setState({
+      status: "inactive",
+      org: {
+        ...state.org,
+        isActive: false,
+        subscriptionStatus: "CANCELLED",
+      },
+    });
+  }, [entitlement?.subscription?.status, state]);
 
   // Staff: after bootstrap, compare JWT entitlement org with URL slug / id.
   useEffect(() => {
     if (mode !== "staff") return;
     if (state.status !== "ok") return;
     if (!orgSlug) return;
-    // Wait until bootstrap settled (ready or failed) before comparing.
     if (!bootstrapReady && !bootstrapError) return;
 
     const entOrg = entitlement?.organization;
@@ -282,8 +340,6 @@ export function TenantGuard({ children, mode = "staff" }: TenantGuardProps) {
     );
   }
 
-  // Staff: wait for bootstrap to settle so mismatch redirect can run
-  // without flashing wrong-org content (still render if bootstrap failed).
   if (mode === "staff" && !bootstrapReady && !bootstrapError) {
     return <BootOverlay />;
   }
