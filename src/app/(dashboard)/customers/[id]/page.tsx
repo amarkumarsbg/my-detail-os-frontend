@@ -55,6 +55,7 @@ import { ApiError } from "@/lib/api-client";
 import { getTransferTagForCustomer } from "@/lib/ownership-transfers";
 import type { Vehicle, JobCard, Invoice, WalletTransaction } from "@/types";
 import { useAuthStore } from "@/store/auth-store";
+import { useTenantSlug } from "@/components/tenant/tenant-context";
 import { userCanCreate, userCanDelete, userCanEdit } from "@/lib/rbac";
 
 function vehicleColorHex(colorName: string): string {
@@ -81,6 +82,7 @@ export default function CustomerDetailPage() {
   const params = useParams();
   const router = useRouter();
   const id = params.id as string;
+  const orgSlug = useTenantSlug();
 
   useEffect(() => {
     if (id) {
@@ -1317,7 +1319,9 @@ export default function CustomerDetailPage() {
                 <p className="text-xs text-muted-foreground">Login phone number</p>
                 <p className="font-mono font-semibold text-base">{customer.phone}</p>
                 <p className="text-xs text-muted-foreground mt-2">
-                  Customer signs in at <span className="font-mono">/customer/login</span> using this number + their password.
+                  Customer signs in at{" "}
+                  <span className="font-mono">/{orgSlug || "{org}"}/customer/login</span>{" "}
+                  using this number + their password.
                 </p>
               </div>
 

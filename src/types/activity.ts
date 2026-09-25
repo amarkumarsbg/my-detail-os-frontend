@@ -11,7 +11,9 @@ export type ActivityEntityType =
   | "STAFF_REWARD"
   | "QUOTATION"
   | "EXPENSE"
-  | "WALLET";
+  | "WALLET"
+  | "NOTIFICATION"
+  | "SERVICE_REMINDER";
 
 export type ActivityAction =
   | "CREATED"
@@ -27,7 +29,10 @@ export type ActivityAction =
   | "MECHANIC_SWITCHED"
   | "OWNERSHIP_TRANSFERRED"
   | "WALLET_CREDITED"
-  | "WALLET_DEBITED";
+  | "WALLET_DEBITED"
+  | "DELETED"
+  | "LOGIN"
+  | "LOGOUT";
 
 export interface ActivityLog {
   id: string;

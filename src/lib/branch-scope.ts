@@ -218,14 +218,21 @@ export function filterActivityByBranch(
   return logs.filter((log) => {
     if (!ACTIVITY_ENTITY_TYPES_WITH_BRANCH.includes(log.entityType)) return true;
     switch (log.entityType) {
-      case "JOB_CARD":
-        return jobBranch.get(log.entityId) === branchId;
+      case "JOB_CARD": {
+        const jobBranchId = jobBranch.get(log.entityId);
+        // Keep when linked job is not loaded yet (avoid empty Activity page).
+        return jobBranchId == null || jobBranchId === branchId;
+      }
       case "INVOICE": {
         const inv = invoiceById.get(log.entityId);
-        return inv ? invoiceBranchId(inv, jobBranch) === branchId : false;
+        if (!inv) return true;
+        return invoiceBranchId(inv, jobBranch) === branchId;
       }
-      case "EXPENSE":
-        return expenseById.get(log.entityId)?.branchId === branchId;
+      case "EXPENSE": {
+        const expense = expenseById.get(log.entityId);
+        if (!expense) return true;
+        return expense.branchId === branchId;
+      }
       default:
         return true;
     }

@@ -2,12 +2,21 @@
 
 import { useEffect, useState, type ReactNode } from "react";
 import { toast } from "sonner";
+import { Mail, Phone, Unplug } from "lucide-react";
 import { buildApiUrl } from "@/lib/api-base";
 import { goToMarketingLogin } from "@/lib/marketing-site";
+import {
+  formatSupportPhoneDisplay,
+  resolveSupportPhone,
+  toTelHref,
+} from "@/lib/plan-limits";
 import { useOrganizationStore } from "@/store/organization-store";
 import { useAppBootstrapStore } from "@/store/app-bootstrap-store";
 import { useTenantSlug } from "@/components/tenant/tenant-context";
 import { BootOverlay } from "@/components/shared/boot-overlay";
+
+const SUPPORT_EMAIL =
+  process.env.NEXT_PUBLIC_SUPPORT_EMAIL?.trim() || "support@mydetailos.com";
 
 type PublicOrgBySlug = {
   id: string;
@@ -60,15 +69,80 @@ async function prefetchBranding(slug: string): Promise<void> {
 function FriendlyMessage({
   title,
   description,
+  contact,
+  icon = "default",
 }: {
   title: string;
   description: string;
+  contact?: {
+    orgName: string;
+    email: string;
+    phone: string;
+  };
+  icon?: "default" | "suspended";
 }) {
+  const mailto = contact
+    ? `mailto:${contact.email}?subject=${encodeURIComponent(
+        `Help restoring access — ${contact.orgName}`
+      )}`
+    : null;
+  const telHref = contact?.phone ? toTelHref(contact.phone) : "";
+  const phoneDisplay = contact?.phone ? formatSupportPhoneDisplay(contact.phone) : "";
+
   return (
     <div className="min-h-screen flex items-center justify-center bg-background px-6">
-      <div className="max-w-md text-center space-y-3">
-        <h1 className="text-xl font-semibold tracking-tight text-foreground">{title}</h1>
-        <p className="text-sm text-muted-foreground">{description}</p>
+      <div className="max-w-md text-center space-y-4">
+        <div className="space-y-3">
+          <div className="flex justify-center">
+            <span
+              className={
+                icon === "suspended"
+                  ? "flex h-14 w-14 items-center justify-center rounded-full bg-rose-50 text-rose-500 ring-1 ring-rose-100"
+                  : "flex h-14 w-14 items-center justify-center rounded-full bg-muted text-muted-foreground"
+              }
+              aria-hidden
+            >
+              <Unplug className="h-7 w-7" strokeWidth={1.75} />
+            </span>
+          </div>
+          <h1 className="text-xl font-semibold tracking-tight text-foreground">{title}</h1>
+          <p className="text-sm text-muted-foreground">{description}</p>
+        </div>
+        {contact && (
+          <div className="rounded-xl border border-border bg-card px-4 py-4 text-left space-y-3">
+            <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
+              Contact support
+            </p>
+            <div className="space-y-2">
+              <a
+                href={mailto || undefined}
+                className="flex items-center gap-3 rounded-lg px-2 py-2 text-sm text-foreground transition-colors hover:bg-accent"
+              >
+                <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-md bg-muted">
+                  <Mail className="h-4 w-4 text-muted-foreground" />
+                </span>
+                <span className="min-w-0">
+                  <span className="block text-xs text-muted-foreground">Email</span>
+                  <span className="block truncate font-medium">{contact.email}</span>
+                </span>
+              </a>
+              {telHref && phoneDisplay ? (
+                <a
+                  href={telHref}
+                  className="flex items-center gap-3 rounded-lg px-2 py-2 text-sm text-foreground transition-colors hover:bg-accent"
+                >
+                  <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-md bg-muted">
+                    <Phone className="h-4 w-4 text-muted-foreground" />
+                  </span>
+                  <span className="min-w-0">
+                    <span className="block text-xs text-muted-foreground">Phone</span>
+                    <span className="block font-medium">{phoneDisplay}</span>
+                  </span>
+                </a>
+              ) : null}
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );
@@ -107,7 +181,7 @@ export function TenantGuard({ children, mode = "staff" }: TenantGuardProps) {
           setState({ status: "not_found" });
           return;
         }
-        if (!org.isActive) {
+        if (!org.isActive || org.subscriptionStatus === "CANCELLED") {
           setState({ status: "inactive", org });
           return;
         }
@@ -170,10 +244,22 @@ export function TenantGuard({ children, mode = "staff" }: TenantGuardProps) {
   }
 
   if (state.status === "inactive") {
+    const suspended = state.org.subscriptionStatus === "CANCELLED";
+    const supportPhone = resolveSupportPhone(entitlement);
     return (
       <FriendlyMessage
-        title={`${state.org.name} is inactive`}
-        description="This workshop account is currently inactive. Please contact support or your administrator for help."
+        title={suspended ? `${state.org.name} is suspended` : `${state.org.name} is inactive`}
+        description={
+          suspended
+            ? "This workshop subscription has been suspended. Reach out to My Detail OS support to restore access."
+            : "This workshop account is currently inactive. Reach out to My Detail OS support for help."
+        }
+        icon="suspended"
+        contact={{
+          orgName: state.org.name,
+          email: SUPPORT_EMAIL,
+          phone: supportPhone,
+        }}
       />
     );
   }

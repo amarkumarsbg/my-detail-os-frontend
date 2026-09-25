@@ -536,20 +536,45 @@ export async function ensureDomainResources(resources: DomainResource[]): Promis
     unique.map(async (resource) => {
       const existing = stateByResource.get(resource);
       if (existing === "ready" || existing === "forbidden") return;
+
+      // If a prior in-flight load was invalidated (generation bump / Strict Mode),
+      // wait for it, then retry when it did not leave the resource ready.
       const pending = inflight.get(resource);
       if (pending) {
         await pending;
+        const after = stateByResource.get(resource);
+        if (after === "ready" || after === "forbidden") return;
+      }
+
+      // Another caller may have started a load while we awaited.
+      if (inflight.has(resource)) {
+        await inflight.get(resource);
         return;
       }
+      if (stateByResource.get(resource) === "ready" || stateByResource.get(resource) === "forbidden") {
+        return;
+      }
+
       const run = (async () => {
         const generationAtStart = loadGeneration.get(resource) ?? 0;
         stateByResource.set(resource, "loading");
         try {
           await loadOne(resource);
-          if ((loadGeneration.get(resource) ?? 0) !== generationAtStart) return;
+          if ((loadGeneration.get(resource) ?? 0) !== generationAtStart) {
+            // Invalidated mid-flight — clear sticky "loading" so a retry can run.
+            if (stateByResource.get(resource) === "loading") {
+              stateByResource.delete(resource);
+            }
+            return;
+          }
           stateByResource.set(resource, "ready");
         } catch (e) {
-          if ((loadGeneration.get(resource) ?? 0) !== generationAtStart) return;
+          if ((loadGeneration.get(resource) ?? 0) !== generationAtStart) {
+            if (stateByResource.get(resource) === "loading") {
+              stateByResource.delete(resource);
+            }
+            return;
+          }
           if (isForbidden(e)) {
             stateByResource.set(resource, "forbidden");
             return;

@@ -42,8 +42,12 @@ import {
   Activity,
   Trash2,
   Loader2,
+  LogIn,
+  LogOut,
 } from "lucide-react";
-import type { ActivityAction, ActivityEntityType } from "@/types";
+import type { ActivityAction, ActivityEntityType, ActivityLog } from "@/types";
+import { buildApiUrl } from "@/lib/api-base";
+import { useAuthStore } from "@/store/auth-store";
 
 const ACTION_ICON_MAP: Record<string, { icon: React.ElementType; className: string }> = {
   // Frontend Actions
@@ -52,6 +56,8 @@ const ACTION_ICON_MAP: Record<string, { icon: React.ElementType; className: stri
   DELETED: { icon: Trash2, className: "bg-red-100 text-red-600 dark:bg-red-900/30 dark:text-red-400" },
   STATUS_CHANGED: { icon: ArrowRightLeft, className: "bg-violet-100 text-violet-600 dark:bg-violet-900/30 dark:text-violet-400" },
   PAYMENT_RECEIVED: { icon: CreditCard, className: "bg-teal-100 text-teal-600 dark:bg-teal-900/30 dark:text-teal-400" },
+  LOGIN: { icon: LogIn, className: "bg-emerald-100 text-emerald-600 dark:bg-emerald-900/30 dark:text-emerald-400" },
+  LOGOUT: { icon: LogOut, className: "bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-300" },
   
   // Backend Actions
   CREATE: { icon: Plus, className: "bg-emerald-100 text-emerald-600 dark:bg-emerald-900/30 dark:text-emerald-400" },
@@ -85,6 +91,8 @@ const ENTITY_ICON_MAP: Record<ActivityEntityType, React.ElementType> = {
   QUOTATION: FileText,
   EXPENSE: Banknote,
   WALLET: Wallet,
+  NOTIFICATION: MessageCircle,
+  SERVICE_REMINDER: CalendarDays,
 };
 
 const ENTITY_ROUTE_MAP: Record<ActivityEntityType, string> = {
@@ -101,6 +109,8 @@ const ENTITY_ROUTE_MAP: Record<ActivityEntityType, string> = {
   QUOTATION: "/quotations",
   EXPENSE: "/reports",
   WALLET: "/customers",
+  NOTIFICATION: "/notifications",
+  SERVICE_REMINDER: "/reminders",
 };
 
 const ACTION_LABELS: Record<string, string> = {
@@ -109,6 +119,8 @@ const ACTION_LABELS: Record<string, string> = {
   DELETED: "Deleted",
   STATUS_CHANGED: "Status Changed",
   PAYMENT_RECEIVED: "Payment Received",
+  LOGIN: "Login",
+  LOGOUT: "Logout",
   
   CREATE: "Created",
   UPDATE: "Updated",
@@ -141,6 +153,8 @@ const ENTITY_LABELS: Record<ActivityEntityType, string> = {
   QUOTATION: "Quotation",
   EXPENSE: "Expense",
   WALLET: "Wallet",
+  NOTIFICATION: "Notification",
+  SERVICE_REMINDER: "Service Reminder",
 };
 
 function formatLogDetails(log: any): string {
@@ -173,6 +187,73 @@ export default function ActivityPage() {
   const { viewingLabel } = useBranchScope();
   const [entityFilter, setEntityFilter] = useState<string>("all");
   const [actionFilter, setActionFilter] = useState<string>("all");
+  const [loading, setLoading] = useState(true);
+
+  // Load ALL activity pages so older seed/history rows are not truncated at pageSize.
+  useEffect(() => {
+    const ac = new AbortController();
+    setLoading(true);
+
+    void (async () => {
+      try {
+        const token = useAuthStore.getState().accessToken;
+        const pageSize = 100;
+        let page = 1;
+        let totalPages = 1;
+        const all: ActivityLog[] = [];
+
+        while (page <= totalPages) {
+          const url = buildApiUrl(
+            `/api/collections/activityLogs?page=${page}&pageSize=${pageSize}`
+          );
+          const res = await fetch(url, {
+            method: "GET",
+            headers: {
+              "Content-Type": "application/json",
+              ...(token ? { Authorization: `Bearer ${token}` } : {}),
+            },
+            cache: "no-store",
+            signal: ac.signal,
+          });
+          const body = (await res.json()) as {
+            data: {
+              items?: ActivityLog[];
+              page?: number;
+              pageSize?: number;
+              totalPages?: number;
+            } | null;
+            error: { message?: string } | null;
+          };
+          if (ac.signal.aborted) return;
+          if (!res.ok || body.error) {
+            throw new Error(body.error?.message || `HTTP ${res.status}`);
+          }
+          const data = body.data ?? { items: [] };
+          const items = Array.isArray(data.items) ? data.items : [];
+          all.push(...items);
+          totalPages = Math.max(1, data.totalPages || 1);
+          page += 1;
+          // Safety: avoid runaway loops if API misreports totalPages
+          if (page > 50) break;
+        }
+
+        if (ac.signal.aborted) return;
+        useActivityLogStore.getState().setInitialPage(
+          all,
+          totalPages,
+          pageSize,
+          totalPages
+        );
+      } catch (err) {
+        if (ac.signal.aborted) return;
+        console.warn("[activity] Failed to load activityLogs:", err);
+      } finally {
+        if (!ac.signal.aborted) setLoading(false);
+      }
+    })();
+
+    return () => ac.abort();
+  }, []);
 
   const observer = useRef<IntersectionObserver | null>(null);
   const lastLogElementRef = useCallback((node: HTMLDivElement | null) => {
@@ -322,13 +403,19 @@ export default function ActivityPage() {
         ))}
       </div>
 
+      {loading && sorted.length === 0 && (
+        <div className="flex justify-center py-12">
+          <Loader2 className="w-6 h-6 animate-spin text-muted-foreground" />
+        </div>
+      )}
+
       {isLoadingMore && (
         <div className="flex justify-center py-6">
           <Loader2 className="w-6 h-6 animate-spin text-muted-foreground" />
         </div>
       )}
 
-      {sorted.length === 0 && (
+      {!loading && sorted.length === 0 && (
         <div className="text-center py-12 text-muted-foreground">
           No activity found matching your filters.
         </div>

@@ -12,6 +12,8 @@
  *    → Notifies customer their vehicle is ready / has been delivered
  */
 
+import { getCustomerPortalLoginUrl } from "@/lib/customer-portal-url";
+
 export interface CustomerCredentialsMessageInput {
   customerName: string;
   phone: string;
@@ -71,21 +73,11 @@ export function buildCustomerCredentialsWhatsAppMessage(
 }
 
 /**
- * Get the customer portal login URL.
- * Falls back to deployed URL or localhost for development.
+ * Customer portal login URL with org slug when available
+ * (e.g. http://localhost:3002/my-detail-os/customer/login).
  */
-export function getCustomerPortalUrl(): string {
-  if (typeof window !== "undefined") {
-    return `${window.location.origin}/customer/login`;
-  }
-
-  // Server-side
-  const publicUrl = process.env.NEXT_PUBLIC_APP_URL?.replace(/\/$/, "");
-  if (publicUrl) {
-    return `${publicUrl}/customer/login`;
-  }
-
-  return "https://yourapp.com/customer/login";
+export function getCustomerPortalUrl(orgSlug?: string | null): string {
+  return getCustomerPortalLoginUrl({ orgSlug });
 }
 
 // ---------------------------------------------------------------------------

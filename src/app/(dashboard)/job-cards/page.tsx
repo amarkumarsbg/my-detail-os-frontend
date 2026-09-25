@@ -52,6 +52,8 @@ import { createOrGetInvoiceForJob } from "@/lib/invoice-from-job-card";
 import { buildJobCardTemplateMessage, defaultWhatsAppTemplateForStatus } from "@/lib/job-card-whatsapp-templates";
 import { sendCustomerWhatsApp, openWhatsAppComposer } from "@/lib/whatsapp-send";
 import { buildJobCardPhotosWhatsAppMessage } from "@/lib/whatsapp-customer-messages";
+import { getCustomerPortalAbsoluteUrl, getCustomerPortalLoginUrl } from "@/lib/customer-portal-url";
+import { resolveWorkshopDisplayName } from "@/lib/workshop-display-name";
 import { WhatsAppIcon } from "@/components/icons/whatsapp-icon";
 import { downloadInvoicePdf, type InvoicePdfOpts } from "@/lib/invoice-pdf";
 import { useDashboardFilterStore, DASHBOARD_FILTER } from "@/store/dashboard-filter-store";
@@ -287,14 +289,16 @@ export default function JobCardsPage() {
   };
 
   const handleSendWhatsApp = async (jc: JobCard) => {
-    const businessName = useSettingsStore.getState().businessName;
+    const businessName = resolveWorkshopDisplayName();
     const invoices = useInvoiceStore.getState().invoices;
     const invoice = invoices.find((inv) => inv.jobCardId === jc.id);
     const buildOpts = {
-      businessName: businessName || "MY DETAIL OS",
+      businessName,
       invoiceNumber: invoice ? invoice.invoiceNumber : null,
-      customerLoginUrl: typeof window !== "undefined" ? window.location.origin : null,
-      customerPhotosLink: jc.secureToken ? `${typeof window !== "undefined" ? window.location.origin : ""}/customer/job-card/${jc.secureToken}/photos` : null,
+      customerLoginUrl: getCustomerPortalLoginUrl(),
+      customerPhotosLink: jc.secureToken
+        ? getCustomerPortalAbsoluteUrl(`/customer/job-card/${jc.secureToken}/photos`)
+        : null,
     };
     const templateId = defaultWhatsAppTemplateForStatus(jc.status);
     const body = buildJobCardTemplateMessage(templateId, jc, buildOpts);
@@ -977,7 +981,10 @@ export default function JobCardsPage() {
                                       e.stopPropagation();
                                       const token = (jc as any).secureToken;
                                       if (token) {
-                                        window.open(`/customer/job-card/${token}/photos`, "_blank");
+                                        window.open(
+                                          getCustomerPortalAbsoluteUrl(`/customer/job-card/${token}/photos`),
+                                          "_blank"
+                                        );
                                       } else {
                                         toast.error("Photos link not ready yet. Please refresh the page.");
                                       }
@@ -992,7 +999,9 @@ export default function JobCardsPage() {
                                       e.stopPropagation();
                                       const token = (jc as any).secureToken;
                                       if (token) {
-                                        const link = `${window.location.origin}/customer/job-card/${token}/photos`;
+                                        const link = getCustomerPortalAbsoluteUrl(
+                                          `/customer/job-card/${token}/photos`
+                                        );
                                         navigator.clipboard.writeText(link).then(() => {
                                           toast.success("Customer link copied to clipboard!");
                                         }).catch(() => {
@@ -1012,8 +1021,10 @@ export default function JobCardsPage() {
                                       e.stopPropagation();
                                       const token = (jc as any).secureToken;
                                       if (token) {
-                                        const link = `${window.location.origin}/customer/job-card/${token}/photos`;
-                                        const bizName = useSettingsStore.getState().businessName || "MY DETAIL OS";
+                                        const link = getCustomerPortalAbsoluteUrl(
+                                          `/customer/job-card/${token}/photos`
+                                        );
+                                        const bizName = resolveWorkshopDisplayName();
                                         const message = buildJobCardPhotosWhatsAppMessage({
                                           customerName: jc.customerName,
                                           jobCardNumber: jc.jobNumber,

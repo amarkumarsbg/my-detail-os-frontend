@@ -219,6 +219,13 @@ export const useAuthStore = create<AuthState>()(
       },
 
       logout: () => {
+        const token = get().accessToken;
+        if (token) {
+          void fetch(buildApiUrl("/api/auth/logout"), {
+            method: "POST",
+            headers: { Authorization: `Bearer ${token}` },
+          }).catch(() => {});
+        }
         useReportFavouritesStore.getState().clear();
         set({
           user: null,

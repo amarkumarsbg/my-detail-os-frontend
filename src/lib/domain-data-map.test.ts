@@ -50,4 +50,12 @@ describe("resourcesForPath", () => {
     expect(r).toContain("membership");
     expect(r).toContain("payroll");
   });
+
+  it("strips tenant org slug before matching route packs", () => {
+    const r = resourcesForPath("/my-detail-os/activity");
+    expect(r).toContain("activityLogs");
+    expect(r).toContain("jobCards");
+    expect(resourcesForPath("/my-detail-os/dashboard")).toContain("dashboardStats");
+    expect(resourcesForPath("/my-detail-os/dashboard")).not.toContain("activityLogs");
+  });
 });

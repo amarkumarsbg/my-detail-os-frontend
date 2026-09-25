@@ -12,13 +12,12 @@ import type {
   ServiceReminder,
 } from "@/types";
 import { formatCurrency } from "@/lib/utils";
+import { getCustomerPortalLoginUrl } from "@/lib/customer-portal-url";
 
-/** Resolve the customer portal URL dynamically — uses current origin in browser, env var on server. */
+/** Resolve the customer portal login URL — prefers /{orgSlug}/customer/login. */
 function resolvePortalUrl(override?: string): string {
   if (override) return override;
-  if (typeof window !== "undefined") return `${window.location.origin}/customer/login`;
-  const base = process.env.NEXT_PUBLIC_APP_URL?.replace(/\/$/, "") ?? "";
-  return base ? `${base}/customer/login` : "/customer/login";
+  return getCustomerPortalLoginUrl();
 }
 /**
  * Formula matches backend generate-password.ts: FIRSTNAME (uppercase) + first 4 phone digits.

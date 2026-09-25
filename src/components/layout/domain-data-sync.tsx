@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { usePathname } from "next/navigation";
 import { useAppBootstrapStore } from "@/store/app-bootstrap-store";
 import { resourcesForPath } from "@/lib/domain-data-map";
+import { stripOrgSlugFromPath } from "@/lib/tenant";
 import {
   areDomainResourcesReady,
   ensureDomainResources,
@@ -21,29 +22,30 @@ import {
  */
 export function DomainDataSync() {
   const pathname = usePathname();
+  const appPath = stripOrgSlugFromPath(pathname);
   const shellReady = useAppBootstrapStore((s) => s.ready);
 
   useEffect(() => {
     if (!shellReady) return;
-    void revalidateRouteDomainData(pathname);
-  }, [pathname, shellReady]);
+    void revalidateRouteDomainData(appPath);
+  }, [appPath, shellReady]);
 
   useEffect(() => {
     if (!shellReady) return;
 
     const onVisible = () => {
       if (document.visibilityState !== "visible") return;
-      maybeRevalidateRouteDomainDataFromVisibility(pathname);
+      maybeRevalidateRouteDomainDataFromVisibility(appPath);
     };
 
     /** Fallback for some Android WebViews that omit visibilitychange on resume. */
     const onFocus = () => {
       if (document.visibilityState === "hidden") return;
-      maybeRevalidateRouteDomainDataFromVisibility(pathname);
+      maybeRevalidateRouteDomainDataFromVisibility(appPath);
     };
 
     const onPageShow = (event: PageTransitionEvent) => {
-      revalidateRouteDomainDataFromPageShow(pathname, event);
+      revalidateRouteDomainDataFromPageShow(appPath, event);
     };
 
     document.addEventListener("visibilitychange", onVisible);
@@ -55,7 +57,7 @@ export function DomainDataSync() {
       window.removeEventListener("focus", onFocus);
       window.removeEventListener("pageshow", onPageShow);
     };
-  }, [pathname, shellReady]);
+  }, [appPath, shellReady]);
 
   return null;
 }
@@ -64,7 +66,7 @@ export function DomainDataSync() {
 export function useDomainDataReady(pathname?: string): boolean {
   const shellReady = useAppBootstrapStore((s) => s.ready);
   const path = usePathname();
-  const effective = pathname ?? path;
+  const effective = stripOrgSlugFromPath(pathname ?? path);
   const [ready, setReady] = useState(false);
 
   useEffect(() => {

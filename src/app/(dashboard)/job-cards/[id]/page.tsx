@@ -82,6 +82,7 @@ import {
   Select,
   SelectContent,
   SelectItem,
+  SelectSeparator,
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
@@ -92,6 +93,11 @@ import { useCustomerStore } from "@/store/customer-store";
 import { useInvoiceStore } from "@/store/invoice-store";
 import { useInventoryStore } from "@/store/inventory-store";
 import { useStaffStore } from "@/store/staff-store";
+import {
+  ADD_MECHANIC_SELECT_VALUE,
+  QuickAddMechanicDialog,
+} from "@/components/staff/quick-add-mechanic-dialog";
+import { canCreateStaffAccounts } from "@/lib/rbac";
 import { useHighEndServiceStore, highEndPriceForSegment } from "@/store/high-end-service-store";
 import { useServiceCatalogStore } from "@/store/service-catalog-store";
 import { useServiceCategoryStore } from "@/store/service-category-store";
@@ -342,6 +348,8 @@ export default function JobCardDetailPage() {
     [staff]
   );
   const authUser = useAuthStore((s) => s.user);
+  const canAddMechanic = canCreateStaffAccounts(authUser?.role);
+  const [addMechanicOpen, setAddMechanicOpen] = useState(false);
   const canAdjustBuffer = useMemo(() => {
     const r = authUser?.role;
     if (!r) return false;
@@ -3453,9 +3461,20 @@ export default function JobCardDetailPage() {
           </p>
           <div className="space-y-2 pt-1">
             <Label htmlFor="quick-assign-mechanic">Mechanic</Label>
-            <Select value={quickAssignMechanicId} onValueChange={setQuickAssignMechanicId}>
+            <Select
+              value={quickAssignMechanicId}
+              onValueChange={(next) => {
+                if (next === ADD_MECHANIC_SELECT_VALUE) {
+                  setAddMechanicOpen(true);
+                  return;
+                }
+                setQuickAssignMechanicId(next);
+              }}
+            >
               <SelectTrigger id="quick-assign-mechanic">
-                <SelectValue placeholder={mechanics.length ? "Select mechanic" : "No mechanics in staff list"} />
+                <SelectValue
+                  placeholder={mechanics.length ? "Select mechanic" : "No mechanics in staff list"}
+                />
               </SelectTrigger>
               <SelectContent>
                 {mechanics.map((m) => (
@@ -3463,19 +3482,53 @@ export default function JobCardDetailPage() {
                     {m.name}
                   </SelectItem>
                 ))}
+                {canAddMechanic && (
+                  <>
+                    {mechanics.length > 0 && <SelectSeparator />}
+                    <SelectItem value={ADD_MECHANIC_SELECT_VALUE} className="text-primary font-medium">
+                      + Add mechanic
+                    </SelectItem>
+                  </>
+                )}
               </SelectContent>
             </Select>
+            {mechanics.length === 0 && canAddMechanic && (
+              <Button
+                type="button"
+                variant="outline"
+                className="w-full gap-1.5"
+                onClick={() => setAddMechanicOpen(true)}
+              >
+                <Plus className="h-4 w-4" />
+                Add mechanic
+              </Button>
+            )}
           </div>
           <div className="flex justify-end gap-2 pt-2">
             <Button variant="outline" onClick={() => setShowQuickAssignDialog(false)}>
               Cancel
             </Button>
-            <Button onClick={handleQuickAssignConfirm} disabled={!mechanics.length}>
+            <Button onClick={handleQuickAssignConfirm} disabled={!quickAssignMechanicId}>
               Assign
             </Button>
           </div>
         </DialogContent>
       </Dialog>
+
+      <QuickAddMechanicDialog
+        open={addMechanicOpen}
+        onOpenChange={setAddMechanicOpen}
+        branchId={jobCard.branchId}
+        title="Add mechanic"
+        description="Creates a mechanic account for this branch and selects them for this job."
+        confirmLabel="Add & select"
+        onCreated={(m) => {
+          setQuickAssignMechanicId(m.id);
+          if (showSwitchDialog) {
+            setSwitchToMechanicId(m.id);
+          }
+        }}
+      />
 
       {/* Switch Mechanic Dialog */}
       <Dialog open={showSwitchDialog} onOpenChange={setShowSwitchDialog}>
@@ -3491,7 +3544,16 @@ export default function JobCardDetailPage() {
 
             <div className="space-y-2">
               <Label>New Mechanic *</Label>
-              <Select value={switchToMechanicId} onValueChange={setSwitchToMechanicId}>
+              <Select
+                value={switchToMechanicId}
+                onValueChange={(next) => {
+                  if (next === ADD_MECHANIC_SELECT_VALUE) {
+                    setAddMechanicOpen(true);
+                    return;
+                  }
+                  setSwitchToMechanicId(next);
+                }}
+              >
                 <SelectTrigger>
                   <SelectValue placeholder="Select mechanic" />
                 </SelectTrigger>
@@ -3499,8 +3561,18 @@ export default function JobCardDetailPage() {
                   {mechanics
                     .filter((m) => m.id !== currentMechanicId)
                     .map((m) => (
-                      <SelectItem key={m.id} value={m.id}>{m.name}</SelectItem>
+                      <SelectItem key={m.id} value={m.id}>
+                        {m.name}
+                      </SelectItem>
                     ))}
+                  {canAddMechanic && (
+                    <>
+                      <SelectSeparator />
+                      <SelectItem value={ADD_MECHANIC_SELECT_VALUE} className="text-primary font-medium">
+                        + Add mechanic
+                      </SelectItem>
+                    </>
+                  )}
                 </SelectContent>
               </Select>
             </div>

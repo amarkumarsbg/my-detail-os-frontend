@@ -1,19 +1,6 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import { Plus } from "lucide-react";
-import { toast } from "sonner";
-import { Button } from "@/components/ui/button";
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 import {
   Select,
   SelectContent,
@@ -22,21 +9,17 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import {
+  ADD_MECHANIC_SELECT_VALUE,
+  QuickAddMechanicDialog,
+} from "@/components/staff/quick-add-mechanic-dialog";
 import { useAuthStore } from "@/store/auth-store";
 import { useStaffStore } from "@/store/staff-store";
 import { canCreateStaffAccounts } from "@/lib/rbac";
 import { cn } from "@/lib/utils";
 
-export const ADD_DRIVER_SELECT_VALUE = "__add_driver__";
-
-function suggestStaffEmail(name: string): string {
-  const slug = name
-    .trim()
-    .toLowerCase()
-    .replace(/[^a-z0-9]+/g, ".")
-    .replace(/^\.+|\.+$/g, "");
-  return `${slug || "driver"}.${Date.now().toString(36)}@primecarwash.local`;
-}
+/** @deprecated Use ADD_MECHANIC_SELECT_VALUE — kept for existing pickup imports. */
+export const ADD_DRIVER_SELECT_VALUE = ADD_MECHANIC_SELECT_VALUE;
 
 type PickupDriverSelectProps = {
   branchId: string;
@@ -61,15 +44,10 @@ export function PickupDriverSelect({
   disabled = false,
 }: PickupDriverSelectProps) {
   const staff = useStaffStore((s) => s.staff);
-  const addStaff = useStaffStore((s) => s.addStaff);
   const authRole = useAuthStore((s) => s.user?.role);
   const canAdd = canCreateStaffAccounts(authRole);
 
   const [addOpen, setAddOpen] = useState(false);
-  const [addName, setAddName] = useState("");
-  const [addPhone, setAddPhone] = useState("");
-  const [addEmail, setAddEmail] = useState("");
-  const [adding, setAdding] = useState(false);
 
   const drivers = useMemo(
     () =>
@@ -83,10 +61,7 @@ export function PickupDriverSelect({
   );
 
   const handleSelect = (next: string) => {
-    if (next === ADD_DRIVER_SELECT_VALUE) {
-      setAddName("");
-      setAddPhone("");
-      setAddEmail("");
+    if (next === ADD_MECHANIC_SELECT_VALUE) {
       setAddOpen(true);
       return;
     }
@@ -96,43 +71,6 @@ export function PickupDriverSelect({
     }
     const driver = drivers.find((d) => d.id === next);
     onValueChange(next, driver?.name);
-  };
-
-  const handleQuickAdd = async () => {
-    const name = addName.trim();
-    const phone = addPhone.trim();
-    if (!name || phone.replace(/\D/g, "").length < 10) {
-      toast.error("Enter name and a 10-digit mobile number.");
-      return;
-    }
-    if (!branchId) {
-      toast.error("Branch is required to add staff.");
-      return;
-    }
-    const email = addEmail.trim() || suggestStaffEmail(name);
-    setAdding(true);
-    try {
-      await addStaff({
-        name,
-        email,
-        phone,
-        role: "MECHANIC",
-        branchId,
-        isActive: true,
-      });
-      const created = useStaffStore.getState().staff.find(
-        (s) => s.email.toLowerCase() === email.toLowerCase()
-      );
-      toast.success(`${name} added as mechanic`);
-      setAddOpen(false);
-      if (created) {
-        onValueChange(created.id, created.name);
-      }
-    } catch {
-      toast.error("Could not add staff. Check API server and try again.");
-    } finally {
-      setAdding(false);
-    }
   };
 
   return (
@@ -159,7 +97,7 @@ export function PickupDriverSelect({
           {canAdd && (
             <>
               <SelectSeparator />
-              <SelectItem value={ADD_DRIVER_SELECT_VALUE} className="text-primary font-medium">
+              <SelectItem value={ADD_MECHANIC_SELECT_VALUE} className="text-primary font-medium">
                 + Add driver or mechanic
               </SelectItem>
             </>
@@ -167,58 +105,15 @@ export function PickupDriverSelect({
         </SelectContent>
       </Select>
 
-      <Dialog open={addOpen} onOpenChange={setAddOpen}>
-        <DialogContent className="sm:max-w-md">
-          <DialogHeader>
-            <DialogTitle>Add driver or mechanic</DialogTitle>
-            <DialogDescription>
-              Creates a mechanic account for this branch and selects them as pickup driver.
-            </DialogDescription>
-          </DialogHeader>
-          <div className="grid gap-3 py-1">
-            <div className="space-y-2">
-              <Label htmlFor="quick-add-name">Full name</Label>
-              <Input
-                id="quick-add-name"
-                value={addName}
-                onChange={(e) => setAddName(e.target.value)}
-                placeholder="e.g. Ravi Kumar"
-                autoComplete="name"
-              />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="quick-add-phone">Mobile</Label>
-              <Input
-                id="quick-add-phone"
-                type="tel"
-                value={addPhone}
-                onChange={(e) => setAddPhone(e.target.value)}
-                placeholder="10-digit number"
-                autoComplete="tel"
-              />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="quick-add-email">Email (optional)</Label>
-              <Input
-                id="quick-add-email"
-                type="email"
-                value={addEmail}
-                onChange={(e) => setAddEmail(e.target.value)}
-                placeholder="Auto-generated if left blank"
-                autoComplete="email"
-              />
-            </div>
-          </div>
-          <DialogFooter className="gap-2 sm:gap-0">
-            <Button type="button" variant="outline" onClick={() => setAddOpen(false)}>
-              Cancel
-            </Button>
-            <Button type="button" disabled={adding} onClick={() => void handleQuickAdd()}>
-              {adding ? "Adding…" : "Add & assign"}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+      <QuickAddMechanicDialog
+        open={addOpen}
+        onOpenChange={setAddOpen}
+        branchId={branchId}
+        title="Add driver or mechanic"
+        description="Creates a mechanic account for this branch and selects them as pickup driver."
+        confirmLabel="Add & assign"
+        onCreated={(m) => onValueChange(m.id, m.name)}
+      />
     </>
   );
 }

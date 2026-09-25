@@ -10,6 +10,7 @@ import {
 } from "react";
 import { usePathname } from "next/navigation";
 import { parseOrgSlugFromPathname, tenantPath } from "@/lib/tenant";
+import { useOrganizationStore } from "@/store/organization-store";
 
 type TenantContextValue = {
   orgSlug: string | null;
@@ -42,13 +43,24 @@ function useSyncedOrgSlug(pathnameSlug: string | null): string | null {
   return pathnameSlug ?? windowSlug;
 }
 
+function normalizeSlug(value: unknown): string | null {
+  if (typeof value !== "string") return null;
+  const trimmed = value.trim().toLowerCase();
+  return trimmed || null;
+}
+
 export function TenantProvider({ children }: { children: ReactNode }) {
   const pathname = usePathname();
+  const entitlementSlug = useOrganizationStore(
+    (s) => normalizeSlug(s.entitlement?.organization?.slug)
+  );
   const fromPath = useMemo(
     () => (pathname ? parseOrgSlugFromPathname(pathname) : null),
     [pathname]
   );
-  const orgSlug = useSyncedOrgSlug(fromPath);
+  // Prefer URL slug; fall back to session entitlement so bare `/messages` still
+  // builds tenant links like `/my-detail-os/messages`.
+  const orgSlug = useSyncedOrgSlug(fromPath) ?? entitlementSlug;
 
   const withTenant = useCallback(
     (path: string) => tenantPath(orgSlug, path),
@@ -63,7 +75,10 @@ export function TenantProvider({ children }: { children: ReactNode }) {
   return <TenantContext.Provider value={value}>{children}</TenantContext.Provider>;
 }
 
-/** Current org slug from the URL, or null when not on a tenant path. */
+/**
+ * Org slug from the URL when present, otherwise from session entitlement.
+ * Null only when neither source has a slug (e.g. marketing / logged-out).
+ */
 export function useTenantSlug(): string | null {
   return useContext(TenantContext).orgSlug;
 }

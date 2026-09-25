@@ -19,10 +19,11 @@ import { useSidebarStore } from "@/store/sidebar-store";
 import { cn } from "@/lib/utils";
 import { SubscriptionRenewBanner } from "@/components/billing/subscription-renew-banner";
 import { goToMarketingLogin } from "@/lib/marketing-site";
-import { stripOrgSlugFromPath } from "@/lib/tenant";
+import { parseOrgSlugFromPathname, stripOrgSlugFromPath } from "@/lib/tenant";
 import { useTenantPath } from "@/components/tenant/tenant-context";
 import { TenantGuard } from "@/components/tenant/tenant-guard";
 import { BootOverlay } from "@/components/shared/boot-overlay";
+import { useOrganizationStore } from "@/store/organization-store";
 
 export default function DashboardLayout({ children }: { children: React.ReactNode }) {
   const isAuthenticated = useAuthStore((s) => s.isAuthenticated);
@@ -35,6 +36,11 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   const [authReady, setAuthReady] = useState(false);
   const [sessionChecked, setSessionChecked] = useState(false);
   const mainScrollRef = useRef<HTMLElement | null>(null);
+  const entitlementSlug = useOrganizationStore((s) => {
+    const slug = s.entitlement?.organization?.slug;
+    return typeof slug === "string" && slug.trim() ? slug.trim().toLowerCase() : null;
+  });
+  const bootstrapReady = useAppBootstrapStore((s) => s.ready);
 
   const currentNavItem = useMemo(() => {
     for (const group of NAV_GROUPS) {
@@ -139,6 +145,26 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
         "Production: check NEXT_PUBLIC_API_URL (API origin only, no /api) and FRONTEND_ORIGIN on Render. Wait ~60s if Render was asleep.",
     });
   }, [bootstrapError]);
+
+  // Canonicalize bare staff URLs (`/messages`) → `/{orgSlug}/messages`.
+  useEffect(() => {
+    if (!authReady || !sessionChecked || !isAuthenticated) return;
+    if (!bootstrapReady || !entitlementSlug) return;
+    if (user?.role === "PLATFORM_OWNER") return;
+    if (parseOrgSlugFromPathname(pathname)) return;
+    const bare = stripOrgSlugFromPath(pathname);
+    const target = bare === "/" ? `/${entitlementSlug}` : `/${entitlementSlug}${bare}`;
+    void router.replace(target);
+  }, [
+    authReady,
+    sessionChecked,
+    isAuthenticated,
+    bootstrapReady,
+    entitlementSlug,
+    pathname,
+    router,
+    user?.role,
+  ]);
 
   if (!authReady || !sessionChecked || !isAuthenticated) {
     return <BootOverlay />;

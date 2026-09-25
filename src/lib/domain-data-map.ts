@@ -3,6 +3,8 @@
  * Keep packs coarse so pages keep working without per-page rewrites.
  */
 
+import { stripOrgSlugFromPath } from "@/lib/tenant";
+
 export type DomainResource =
   | "customers"
   | "vehicles"
@@ -254,7 +256,8 @@ const ROUTE_PACKS: { prefix: string; resources: DomainResource[] }[] = [
 ];
 
 export function resourcesForPath(pathname: string): DomainResource[] {
-  const path = pathname.split("?")[0] || "/";
+  // Tenant URLs are `/ {orgSlug}/activity` — match packs against the app path only.
+  const path = stripOrgSlugFromPath(pathname.split("?")[0] || "/");
   const matched = ROUTE_PACKS.filter(
     (p) => path === p.prefix || path.startsWith(`${p.prefix}/`)
   );

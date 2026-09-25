@@ -29,6 +29,8 @@ import {
   openWhatsAppComposer,
   sendCustomerWhatsApp,
 } from "@/lib/whatsapp-send";
+import { getCustomerPortalAbsoluteUrl, getCustomerPortalLoginUrl } from "@/lib/customer-portal-url";
+import { resolveWorkshopDisplayName } from "@/lib/workshop-display-name";
 import { useNotificationStore } from "@/store/notification-store";
 import type { JobCard } from "@/types";
 
@@ -56,14 +58,20 @@ export function JobCardWhatsAppNotifyDialog({
   const [message, setMessage] = useState("");
   const [sending, setSending] = useState(false);
 
+  const displayName = resolveWorkshopDisplayName({ businessName });
+
   const buildOpts = useMemo(
     () => ({
-      businessName,
+      businessName: displayName,
       invoiceNumber: invoiceNumber ?? null,
-      customerLoginUrl: appOrigin() || null,
-      customerPhotosLink: jobCard.secureToken ? `${appOrigin()}/customer/job-card/${jobCard.secureToken}/photos` : null,
+      customerLoginUrl: getCustomerPortalLoginUrl({ origin: appOrigin() || null }),
+      customerPhotosLink: jobCard.secureToken
+        ? getCustomerPortalAbsoluteUrl(`/customer/job-card/${jobCard.secureToken}/photos`, {
+            origin: appOrigin() || null,
+          })
+        : null,
     }),
-    [businessName, invoiceNumber, jobCard.secureToken]
+    [displayName, invoiceNumber, jobCard.secureToken]
   );
 
   useEffect(() => {

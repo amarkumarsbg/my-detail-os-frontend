@@ -25,6 +25,8 @@ import {
 } from "@/lib/whatsapp-customer-messages";
 import { executeCustomerWhatsAppAutomation } from "@/lib/whatsapp-automation-flow";
 import { useJobCardStore } from "@/store/job-card-store";
+import { getCustomerPortalLoginUrl } from "@/lib/customer-portal-url";
+import { resolveWorkshopDisplayName } from "@/lib/workshop-display-name";
 
 function branchIdForJobCardId(jobCardId: string | undefined): string | undefined {
   if (!jobCardId) return undefined;
@@ -38,10 +40,9 @@ export function notifyBeforePhotosReadyWhatsApp(
 ): void {
   const phone = job.customerPhone?.trim();
   if (!phone) return;
-  const appUrl = typeof window !== "undefined" ? window.location.origin : (process.env.NEXT_PUBLIC_APP_URL?.replace(/\/$/, "") ?? "");
-  const portalUrl = `${appUrl}/customer/login`;
+  const portalUrl = getCustomerPortalLoginUrl();
   const message = buildBeforePhotosReadyWhatsAppMessage(job, {
-    businessName,
+    businessName: resolveWorkshopDisplayName({ businessName }),
     portalUrl,
     temporaryPassword: opts?.temporaryPassword,
     customerPhone: phone,
@@ -73,10 +74,9 @@ export function notifyJobReadyWhatsApp(job: JobCard, businessName: string): void
   const temporaryPassword = typeof sessionStorage !== "undefined"
     ? sessionStorage.getItem(sessionKey) ?? undefined
     : undefined;
-  const appUrl = typeof window !== "undefined" ? window.location.origin : (process.env.NEXT_PUBLIC_APP_URL?.replace(/\/$/, "") ?? "");
   const message = buildJobReadyForPickupWhatsAppMessage(job, {
-    businessName,
-    portalUrl: `${appUrl}/customer/login`,
+    businessName: resolveWorkshopDisplayName({ businessName }),
+    portalUrl: getCustomerPortalLoginUrl(),
     temporaryPassword,
   });
   // Clear after use
@@ -105,8 +105,7 @@ export function notifyJobReadyWhatsApp(job: JobCard, businessName: string): void
 export function notifyJobDeliveredWhatsApp(job: JobCard, businessName: string): void {
   const phone = job.customerPhone?.trim();
   if (!phone) return;
-  const appUrl = typeof window !== "undefined" ? window.location.origin : (process.env.NEXT_PUBLIC_APP_URL?.replace(/\/$/, "") ?? "");
-  const portalUrl = `${appUrl}/customer/login`;
+  const portalUrl = getCustomerPortalLoginUrl();
   // Retrieve stored temp password if still in session (cleared after use)
   const sessionKey = `customer-temp-pass:${job.customerId}`;
   const temporaryPassword = typeof sessionStorage !== "undefined"
