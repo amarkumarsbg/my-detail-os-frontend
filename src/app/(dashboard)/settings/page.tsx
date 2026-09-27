@@ -835,12 +835,15 @@ export default function SettingsPage() {
                             / {entitlement.subscription.effectiveMaxUsers == null ? "unlimited" : entitlement.subscription.effectiveMaxUsers}
                           </span>
                         </div>
+                        <p className="mt-1.5 text-[11px] text-muted-foreground">
+                          Super Admin always counts as 1 user. Mechanics do not use a seat.
+                        </p>
                         {(() => {
                           const max = entitlement.subscription.effectiveMaxUsers;
                           const used = entitlement.usage.usersUsed ?? 0;
                           if (max !== null && max !== undefined && used >= max) {
                             return (
-                              <p className="mt-1.5 text-xs text-orange-600 dark:text-orange-400">
+                              <p className="mt-1 text-xs text-orange-600 dark:text-orange-400">
                                 User limit reached. Add extra users when renewing.
                               </p>
                             );
