@@ -808,9 +808,11 @@ export function SubscriptionRenewalWorkbench({
               <span>Capacity only — expiry unchanged</span>
               <span className="text-border">·</span>
               <span>
-                {sub.expiresAt || sub.currentPeriodEnd
-                  ? formatDate(sub.expiresAt ?? sub.currentPeriodEnd)
-                  : "No expiry"}
+                {sub.expiresAt
+                  ? formatDate(sub.expiresAt)
+                  : sub.currentPeriodEnd
+                    ? formatDate(sub.currentPeriodEnd)
+                    : "No expiry"}
               </span>
               <span className="text-border">·</span>
               <span className="inline-flex items-center gap-1">
