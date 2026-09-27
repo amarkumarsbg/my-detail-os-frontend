@@ -91,7 +91,8 @@ export function isMailtoUrl(url: string): boolean {
 }
 
 /** Docs placeholders that look “broken” in the browser (blank mailto tab / example.com). */
-export function isPlaceholderPlanUrl(url: string): boolean {
+export function isPlaceholderPlanUrl(url: string | null | undefined): boolean {
+  if (typeof url !== "string") return true;
   const u = url.trim().toLowerCase();
   if (!u) return true;
   if (u.includes("example.com")) return true;
@@ -99,8 +100,8 @@ export function isPlaceholderPlanUrl(url: string): boolean {
   return false;
 }
 
-export function planCtaOpenMode(url: string): "mailto" | "external" | "placeholder" {
+export function planCtaOpenMode(url: string | null | undefined): "mailto" | "external" | "placeholder" {
   if (isPlaceholderPlanUrl(url)) return "placeholder";
-  if (isMailtoUrl(url)) return "mailto";
+  if (isMailtoUrl(url!)) return "mailto";
   return "external";
 }

@@ -147,7 +147,7 @@ export function PlanSupportDialog({
 }
 
 type CtaProps = {
-  href: string;
+  href?: string | null;
   phone?: string | null;
   children: ReactNode;
   className?: string;
@@ -167,12 +167,13 @@ export function PlanCtaButton({
   dialogTitle,
 }: CtaProps) {
   const [open, setOpen] = useState(false);
-  const mode = planCtaOpenMode(href);
+  const resolvedHref = href?.trim() || "mailto:support@mydetailos.com";
+  const mode = planCtaOpenMode(resolvedHref);
 
   if (mode === "external") {
     return (
       <Button type="button" variant={variant} size={size} className={className} asChild>
-        <a href={href} target="_blank" rel="noreferrer">
+        <a href={resolvedHref} target="_blank" rel="noreferrer">
           {children}
         </a>
       </Button>
@@ -193,7 +194,7 @@ export function PlanCtaButton({
       <PlanSupportDialog
         open={open}
         onOpenChange={setOpen}
-        href={href}
+        href={resolvedHref}
         phone={phone}
         title={dialogTitle}
       />

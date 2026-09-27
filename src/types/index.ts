@@ -1,6 +1,6 @@
 export type PlanCode = "STARTER" | "GROWTH" | "BUSINESS" | "ENTERPRISE" | "CUSTOM";
 
-export type SubscriptionStatus = "ACTIVE" | "PAST_DUE" | "EXPIRED" | "CANCELLED";
+export type SubscriptionStatus = "ACTIVE" | "PAST_DUE" | "EXPIRED" | "CANCELLED" | "TRIAL";
 
 export type SubscriptionPaymentStatus = "PAID" | "PENDING" | "PROCESSING" | "FAILED";
 
@@ -105,6 +105,27 @@ export type SubscriptionPricingBreakdown = {
   finalAllowedUsers: number | null;
   currency: string;
   isFirstSubscription: boolean;
+};
+
+/** Mid-cycle capacity purchase (extras + GST only). */
+export type SubscriptionAddOnBreakdown = {
+  kind: "ADDON";
+  planCode: PlanCode;
+  planName: string;
+  extraBranches: number;
+  extraUsers: number;
+  extraBranchCost: number;
+  extraUserCost: number;
+  gstPercent: number;
+  gstAmount: number;
+  subTotalBeforeTax: number;
+  finalAmount: number;
+  previousAllowedBranches: number | null;
+  previousAllowedUsers: number | null;
+  finalAllowedBranches: number | null;
+  finalAllowedUsers: number | null;
+  currency: string;
+  expiresAt: string | null;
 };
 
 export type SubscriptionRenewalHistoryRow = {
