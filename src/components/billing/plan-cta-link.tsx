@@ -211,12 +211,13 @@ export function PlanCtaTextButton({
   dialogTitle,
 }: Omit<CtaProps, "variant" | "size">) {
   const [open, setOpen] = useState(false);
-  const mode = planCtaOpenMode(href);
+  const resolvedHref = href?.trim() || "mailto:support@mydetailos.com";
+  const mode = planCtaOpenMode(resolvedHref);
 
   if (mode === "external") {
     return (
       <a
-        href={href}
+        href={resolvedHref}
         target="_blank"
         rel="noreferrer"
         className={cn("text-primary underline-offset-4 hover:underline", className)}
@@ -241,7 +242,7 @@ export function PlanCtaTextButton({
       <PlanSupportDialog
         open={open}
         onOpenChange={setOpen}
-        href={href}
+        href={resolvedHref}
         phone={phone}
         title={dialogTitle}
       />
