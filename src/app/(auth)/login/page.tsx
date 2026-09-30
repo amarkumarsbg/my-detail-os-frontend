@@ -1,7 +1,7 @@
 "use client";
 
 import { Suspense, useEffect, useState } from "react";
-import { usePathname, useSearchParams } from "next/navigation";
+import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { useAuthStore } from "@/store/auth-store";
 import { buildApiUrl } from "@/lib/api-base";
 import { markAuthHandoffFresh } from "@/lib/auth-handoff";
@@ -54,6 +54,7 @@ type OrgBody = {
 function LoginHandoffPage() {
   const searchParams = useSearchParams();
   const pathname = usePathname();
+  const router = useRouter();
   const applyAuthPayload = useAuthStore((s) => s.applyAuthPayload);
   const [error, setError] = useState<string | null>(null);
 
@@ -131,7 +132,15 @@ function LoginHandoffPage() {
         if (role !== "PLATFORM_OWNER") {
           dest = tenantPath(orgSlug, dest);
         }
-        window.location.replace(dest);
+
+        // Soft nav — avoid a second full document load (biggest remaining prod delay).
+        // Strip hash so the access token is not left in the address bar / history.
+        window.history.replaceState(
+          null,
+          "",
+          `${window.location.pathname}${window.location.search}`
+        );
+        router.replace(dest);
       } catch {
         if (!cancelled) {
           goToMarketingLogin();
