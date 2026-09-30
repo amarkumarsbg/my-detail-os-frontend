@@ -18,15 +18,11 @@ const nextConfig: NextConfig = {
     ],
   },
   async redirects() {
-    const raw =
+    const marketing =
       process.env.NEXT_PUBLIC_MARKETING_SITE_URL?.replace(/\/$/, "") ||
       (process.env.NODE_ENV === "production"
-        ? "https://prime-detailers-website.vercel.app"
+        ? "https://www.mydetailos.com"
         : "http://localhost:3003");
-    const marketing =
-      /^https?:\/\/(www\.)?mydetailos\.com$/i.test(raw)
-        ? "https://prime-detailers-website.vercel.app"
-        : raw;
     return [
       { source: "/signup", destination: `${marketing}/signup`, permanent: false },
       { source: "/register", destination: `${marketing}/signup`, permanent: false },
