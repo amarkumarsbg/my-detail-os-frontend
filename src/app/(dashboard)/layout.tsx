@@ -19,6 +19,10 @@ import { useSidebarStore } from "@/store/sidebar-store";
 import { cn } from "@/lib/utils";
 import { SubscriptionRenewBanner } from "@/components/billing/subscription-renew-banner";
 import { goToMarketingLogin } from "@/lib/marketing-site";
+import {
+  completeStaffAuthHandoff,
+  readAccessTokenFromLocation,
+} from "@/lib/auth-handoff";
 import { parseOrgSlugFromPathname, stripOrgSlugFromPath } from "@/lib/tenant";
 import { useTenantPath } from "@/components/tenant/tenant-context";
 import { TenantGuard } from "@/components/tenant/tenant-guard";
@@ -34,6 +38,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   const tenantHref = useTenantPath();
   const router = useRouter();
   const [authReady, setAuthReady] = useState(false);
+  const [handoffDone, setHandoffDone] = useState(false);
   const [sessionChecked, setSessionChecked] = useState(false);
   const mainScrollRef = useRef<HTMLElement | null>(null);
   const entitlementSlug = useOrganizationStore((s) => {
@@ -62,8 +67,31 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
     return unsub;
   }, []);
 
+  /** Marketing → /{slug}/dashboard#accessToken=… (one document load). */
   useEffect(() => {
-    if (!authReady) return;
+    let cancelled = false;
+    void (async () => {
+      const token = readAccessTokenFromLocation();
+      if (!token) {
+        if (!cancelled) setHandoffDone(true);
+        return;
+      }
+      const orgSlug = parseOrgSlugFromPathname(pathname);
+      const result = await completeStaffAuthHandoff(token, orgSlug);
+      if (cancelled) return;
+      if (!result.ok) {
+        goToMarketingLogin();
+        return;
+      }
+      setHandoffDone(true);
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [pathname]);
+
+  useEffect(() => {
+    if (!authReady || !handoffDone) return;
     let cancelled = false;
     void (async () => {
       await useAuthStore.getState().ensureValidSession();
@@ -72,7 +100,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
     return () => {
       cancelled = true;
     };
-  }, [authReady]);
+  }, [authReady, handoffDone]);
 
   useEffect(() => {
     if (!authReady || !sessionChecked) return;
@@ -166,7 +194,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
     user?.role,
   ]);
 
-  if (!authReady || !sessionChecked || !isAuthenticated) {
+  if (!authReady || !handoffDone || !sessionChecked || !isAuthenticated) {
     return <BootOverlay />;
   }
 
