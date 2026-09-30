@@ -1,5 +1,5 @@
 import type { DomainResource } from "@/lib/domain-data-map";
-import { resourcesForPath } from "@/lib/domain-data-map";
+import { deferredResourcesForPath, resourcesForPath } from "@/lib/domain-data-map";
 import {
   ensureDomainResources,
   invalidateDomainResources,
@@ -24,12 +24,20 @@ function routeResources(pathname: string): DomainResource[] {
   return resourcesForPath(pathname);
 }
 
+async function ensureRoutePackWithDeferred(pathname: string): Promise<void> {
+  const resources = routeResources(pathname);
+  await ensureDomainResources(["appSettings", ...resources]);
+  const deferred = deferredResourcesForPath(pathname);
+  if (deferred.length > 0) {
+    void ensureDomainResources(deferred);
+  }
+}
+
 /** Revalidate domain collections for the active route (navigation, manual refresh). */
 export async function revalidateRouteDomainData(pathname: string): Promise<void> {
-  const resources = routeResources(pathname);
   lastRouteRevalidateAt = Date.now();
   // We no longer invalidate here so that hasFetched flags are respected on sidebar navigation
-  await ensureDomainResources(["appSettings", ...resources]);
+  await ensureRoutePackWithDeferred(pathname);
 }
 
 /**
@@ -42,8 +50,9 @@ export function maybeRevalidateRouteDomainDataFromVisibility(pathname: string): 
   if (now - lastVisibilityRevalidateAt < VISIBILITY_REVALIDATE_MIN_MS) return;
   lastVisibilityRevalidateAt = now;
   const resources = routeResources(pathname);
-  invalidateDomainResources(resources);
-  void ensureDomainResources(["appSettings", ...resources]);
+  const deferred = deferredResourcesForPath(pathname);
+  invalidateDomainResources([...resources, ...deferred]);
+  void ensureRoutePackWithDeferred(pathname);
 }
 
 /**

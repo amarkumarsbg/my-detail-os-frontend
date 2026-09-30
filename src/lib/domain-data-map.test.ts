@@ -1,12 +1,24 @@
 import { describe, expect, it } from "vitest";
-import { resourcesForPath } from "@/lib/domain-data-map";
+import { deferredResourcesForPath, resourcesForPath } from "@/lib/domain-data-map";
 
 describe("resourcesForPath", () => {
-  it("maps dashboard to core pack", () => {
+  it("maps dashboard to slim core pack", () => {
     const r = resourcesForPath("/dashboard");
     expect(r).toContain("jobCards");
     expect(r).toContain("dashboardStats");
+    expect(r).toContain("invoices");
+    expect(r).toContain("notifications");
     expect(r).not.toContain("payroll");
+    expect(r).not.toContain("expenses");
+    expect(r).not.toContain("customers");
+  });
+
+  it("defers secondary dashboard collections", () => {
+    const d = deferredResourcesForPath("/dashboard");
+    expect(d).toContain("expenses");
+    expect(d).toContain("customers");
+    expect(d).toContain("parts");
+    expect(deferredResourcesForPath("/payroll")).toEqual([]);
   });
 
   it("maps payroll without cashBank", () => {
@@ -57,5 +69,6 @@ describe("resourcesForPath", () => {
     expect(r).toContain("jobCards");
     expect(resourcesForPath("/my-detail-os/dashboard")).toContain("dashboardStats");
     expect(resourcesForPath("/my-detail-os/dashboard")).not.toContain("activityLogs");
+    expect(deferredResourcesForPath("/my-detail-os/dashboard")).toContain("expenses");
   });
 });

@@ -18,7 +18,8 @@ interface AppBootstrapState {
 }
 
 const RETRIES = 4;
-const DELAY_MS = 2500;
+/** Backoff between bootstrap failures (cold Render wake). Kept short so sleeps don't dominate. */
+const RETRY_DELAYS_MS = [500, 1500, 3000, 5000] as const;
 
 /** Shared single-flight promise for run + refresh. */
 let inflight: Promise<void> | null = null;
@@ -81,7 +82,9 @@ export const useAppBootstrapStore = create<AppBootstrapState>((set, get) => ({
             return;
           } catch (e) {
             lastError = e;
-            if (attempt < RETRIES - 1) await sleep(DELAY_MS * (attempt + 1));
+            if (attempt < RETRIES - 1) {
+              await sleep(RETRY_DELAYS_MS[attempt] ?? RETRY_DELAYS_MS[RETRY_DELAYS_MS.length - 1]);
+            }
           }
         }
         set({

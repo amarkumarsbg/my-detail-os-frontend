@@ -9,6 +9,7 @@ import {
   defaultBranchForUser,
 } from "@/lib/branch-selection";
 import { buildApiUrl } from "@/lib/api-base";
+import { consumeFreshAuthHandoff } from "@/lib/auth-handoff";
 import { useReportFavouritesStore } from "@/store/report-favourites-store";
 
 export type SendLoginOtpResult =
@@ -78,6 +79,10 @@ export const useAuthStore = create<AuthState>()(
       ensureValidSession: async () => {
         const token = get().accessToken;
         if (!token) return;
+        // SSO handoff already validated this JWT seconds ago — skip duplicate RTT.
+        if (consumeFreshAuthHandoff() && get().user && get().isAuthenticated) {
+          return;
+        }
         try {
           const res = await fetch(buildApiUrl("/api/auth/me"), {
             headers: { Authorization: `Bearer ${token}` },

@@ -45,17 +45,22 @@ export type DomainResource =
   | "reportSchedules"
   | "vehicleCatalog";
 
+/** First-paint dashboard pack — keep small so login → shell feels fast. */
 const DASHBOARD_CORE: DomainResource[] = [
+  "dashboardStats",
+  "notifications",
   "jobCards",
   "invoices",
+];
+
+/** Loaded right after DASHBOARD_CORE settles (does not block useDomainDataReady). */
+const DASHBOARD_DEFERRED: DomainResource[] = [
   "expenses",
   "appointments",
   "serviceReminders",
   "customers",
   "parts",
   "stockMovements",
-  "dashboardStats",
-  "notifications",
   "staffDirectory",
 ];
 
@@ -266,4 +271,13 @@ export function resourcesForPath(pathname: string): DomainResource[] {
   }
   matched.sort((a, b) => b.prefix.length - a.prefix.length);
   return [...new Set(matched[0]!.resources)];
+}
+
+/** Extra collections to warm after the critical route pack (dashboard only today). */
+export function deferredResourcesForPath(pathname: string): DomainResource[] {
+  const path = stripOrgSlugFromPath(pathname.split("?")[0] || "/");
+  if (path === "/dashboard" || path.startsWith("/dashboard/")) {
+    return [...DASHBOARD_DEFERRED];
+  }
+  return [];
 }
