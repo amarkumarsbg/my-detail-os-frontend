@@ -143,7 +143,6 @@ function roleBadgeFor(role: string | undefined | null) {
 
 const ALL_ROLES_FILTER: (UserRole | "ALL")[] = [
   "ALL",
-  "SUPER_ADMIN",
   "ADMIN",
   "BRANCH_MANAGER",
   "MANAGER",
@@ -152,7 +151,7 @@ const ALL_ROLES_FILTER: (UserRole | "ALL")[] = [
   "MECHANIC",
 ];
 
-/** Roles shown in the Add User form and Users tab (UI only — backend role values unchanged). */
+/** Roles shown in the Add User form (UI only — backend role values unchanged). Super Admin is not assignable here. */
 const ADD_USER_ROLE_OPTIONS: { value: UserRole; label: string }[] = [
   { value: "BRANCH_MANAGER", label: "Branch Manager" },
   { value: "MANAGER", label: "Manager" },
@@ -160,11 +159,17 @@ const ADD_USER_ROLE_OPTIONS: { value: UserRole; label: string }[] = [
   { value: "RECEPTIONIST", label: "Receptionist" },
 ];
 
-const USER_DIRECTORY_ROLES = new Set<UserRole>(
-  ADD_USER_ROLE_OPTIONS.map((option) => option.value)
-);
+/** Users tab directory: office roles + Super Admin (counted as a user, not staff). */
+const USER_DIRECTORY_ROLES = new Set<UserRole>([
+  "SUPER_ADMIN",
+  ...ADD_USER_ROLE_OPTIONS.map((option) => option.value),
+]);
 
-const USER_ROLES_FILTER: (UserRole | "ALL")[] = ["ALL", ...ADD_USER_ROLE_OPTIONS.map((o) => o.value)];
+const USER_ROLES_FILTER: (UserRole | "ALL")[] = [
+  "ALL",
+  "SUPER_ADMIN",
+  ...ADD_USER_ROLE_OPTIONS.map((o) => o.value),
+];
 
 const STAFF_ROLES_FILTER: (UserRole | "ALL")[] = ALL_ROLES_FILTER.filter(
   (role) => role === "ALL" || !USER_DIRECTORY_ROLES.has(role)
