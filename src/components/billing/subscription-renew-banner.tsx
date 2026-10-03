@@ -8,6 +8,7 @@ import { useOrganizationStore } from "@/store/organization-store";
 import { formatPaymentStatus, termLabelFromMonths } from "@/lib/subscription-export-lock";
 import { formatCurrency, formatDate, cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
+import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import {
@@ -265,6 +266,11 @@ export function SubscriptionRenewDialog({
   const [extraUsersInput, setExtraUsersInput] = useState("0");
   const [referralCode, setReferralCode] = useState(() => peekSaasReferral() ?? "");
   const [quote, setQuote] = useState<SubscriptionPricingBreakdown | null>(null);
+  const walletBalance = entitlement?.organization.referralWalletPoints ?? 0;
+  const [useWalletPoints, setUseWalletPoints] = useState(walletBalance > 0);
+  const [walletPointsInput, setWalletPointsInput] = useState(
+    walletBalance > 0 ? String(walletBalance) : ""
+  );
 
   useEffect(() => {
     if (referralCode.trim()) return;
@@ -277,6 +283,11 @@ export function SubscriptionRenewDialog({
   const selectedIsPayable = SELF_SERVE_PLANS.includes(planCode);
   const extraBranches = useMemo(() => parseCount(extraBranchesInput), [extraBranchesInput]);
   const extraUsers = useMemo(() => parseCount(extraUsersInput), [extraUsersInput]);
+  const walletPointsToUse = useMemo(() => {
+    if (!useWalletPoints) return null;
+    const n = parseCount(walletPointsInput);
+    return n > 0 ? n : 0;
+  }, [useWalletPoints, walletPointsInput]);
   const normalizedReferral = useMemo(() => {
     const t = referralCode.trim();
     return t.length > 0 ? t : null;
@@ -323,6 +334,11 @@ export function SubscriptionRenewDialog({
     setReferralCode(
       peekSaasReferral() ?? entitlement?.organization.referralCode ?? ""
     );
+    {
+      const bal = entitlement?.organization.referralWalletPoints ?? 0;
+      setUseWalletPoints(bal > 0);
+      setWalletPointsInput(bal > 0 ? String(bal) : "");
+    }
     setQuote(null);
 
     let cancelled = false;
@@ -371,6 +387,8 @@ export function SubscriptionRenewDialog({
           extraBranches,
           extraUsers,
           referralCode: normalizedReferral,
+          useWalletPoints,
+          walletPoints: walletPointsToUse,
         }
       )
         .then((data) => {
@@ -394,6 +412,8 @@ export function SubscriptionRenewDialog({
     extraBranches,
     extraUsers,
     normalizedReferral,
+    useWalletPoints,
+    walletPointsToUse,
     selectedIsPayable,
   ]);
 
@@ -408,10 +428,24 @@ export function SubscriptionRenewDialog({
         extraBranches,
         extraUsers,
         referralCode: normalizedReferral,
+        useWalletPoints,
+        walletPoints: walletPointsToUse,
         notes: isTrial
           ? `Trial upgrade to ${planCode}`
           : `Renewal / upgrade to ${planCode}`,
       });
+
+      if (data.payment.status === "PAID") {
+        setEntitlement(data.entitlement);
+        toast.success("Payment successful", {
+          description:
+            (quote?.walletPointsApplied ?? 0) > 0
+              ? "Covered by referral wallet points. Your subscription is active."
+              : "Your subscription is active. Thank you!",
+        });
+        onOpenChange(false);
+        return;
+      }
 
       if (data.checkout?.provider === "RAZORPAY") {
         onOpenChange(false);
@@ -612,6 +646,49 @@ export function SubscriptionRenewDialog({
                     onChange={(e) => setExtraUsersInput(e.target.value)}
                   />
                 </div>
+                {(quote?.walletPointsAvailable ?? walletBalance) > 0 ? (
+                  <div className="space-y-1.5 sm:col-span-2">
+                    <div className="flex items-start gap-2">
+                      <Checkbox
+                        id="cfg-use-wallet"
+                        checked={useWalletPoints}
+                        onCheckedChange={(v) => {
+                          const on = v === true;
+                          setUseWalletPoints(on);
+                          if (on && !walletPointsInput) {
+                            setWalletPointsInput(
+                              String(quote?.walletPointsAvailable ?? walletBalance)
+                            );
+                          }
+                        }}
+                      />
+                      <Label htmlFor="cfg-use-wallet" className="text-xs font-normal leading-snug">
+                        Use wallet points ({quote?.walletPointsAvailable ?? walletBalance} available
+                        · 1 pt = ₹1 before GST)
+                      </Label>
+                    </div>
+                    {useWalletPoints ? (
+                      <div className="flex items-center gap-2 pl-6">
+                        <Label htmlFor="cfg-wallet-points-amount" className="sr-only">
+                          Points to redeem
+                        </Label>
+                        <Input
+                          id="cfg-wallet-points-amount"
+                          type="number"
+                          min={1}
+                          max={quote?.walletPointsAvailable ?? walletBalance}
+                          className="h-9 w-28 tabular-nums"
+                          value={walletPointsInput}
+                          onChange={(e) => setWalletPointsInput(e.target.value)}
+                          placeholder="e.g. 100"
+                        />
+                        <span className="text-[11px] text-muted-foreground">
+                          points (max {quote?.walletPointsAvailable ?? walletBalance})
+                        </span>
+                      </div>
+                    ) : null}
+                  </div>
+                ) : null}
               </div>
 
               <div className="rounded-xl border bg-muted/30 p-3 text-sm">
@@ -652,6 +729,16 @@ export function SubscriptionRenewDialog({
                       <div className="flex justify-between gap-2 text-xs">
                         <span className="text-muted-foreground">Referral</span>
                         <span className="tabular-nums">−{formatCurrency(quote.referralDiscount)}</span>
+                      </div>
+                    ) : null}
+                    {(quote.walletPointsDiscount ?? 0) > 0 ? (
+                      <div className="flex justify-between gap-2 text-xs">
+                        <span className="text-muted-foreground">
+                          Wallet ({quote.walletPointsApplied} pts)
+                        </span>
+                        <span className="tabular-nums">
+                          −{formatCurrency(quote.walletPointsDiscount ?? 0)}
+                        </span>
                       </div>
                     ) : null}
                     <div className="flex justify-between gap-2 text-xs">
@@ -699,7 +786,11 @@ export function SubscriptionRenewDialog({
               onClick={() => void submit()}
               disabled={submitting || quoteLoading || !planCode}
             >
-              {submitting ? "Opening…" : "Pay"}
+              {submitting
+                ? "Opening…"
+                : quote && quote.finalAmount <= 0
+                  ? "Redeem points"
+                  : "Pay"}
             </Button>
           ) : (
             <PlanCtaButton

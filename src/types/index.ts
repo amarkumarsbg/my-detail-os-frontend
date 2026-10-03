@@ -104,6 +104,9 @@ export type SubscriptionPricingBreakdown = {
   referralEligible: boolean;
   referralValidationMessage: string | null;
   referrerOrganizationId?: string | null;
+  walletPointsAvailable?: number;
+  walletPointsApplied?: number;
+  walletPointsDiscount?: number;
   gstPercent: number;
   gstAmount: number;
   subTotalBeforeTax: number;
@@ -125,6 +128,9 @@ export type SubscriptionAddOnBreakdown = {
   extraUsers: number;
   extraBranchCost: number;
   extraUserCost: number;
+  walletPointsAvailable?: number;
+  walletPointsApplied?: number;
+  walletPointsDiscount?: number;
   gstPercent: number;
   gstAmount: number;
   subTotalBeforeTax: number;

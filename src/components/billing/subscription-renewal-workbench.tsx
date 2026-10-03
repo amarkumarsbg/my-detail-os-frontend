@@ -8,6 +8,7 @@ import { formatCurrency, formatDate, cn } from "@/lib/utils";
 import { formatPaymentStatus, termLabelFromMonths } from "@/lib/subscription-export-lock";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import {
@@ -211,19 +212,39 @@ export function SubscriptionRenewalWorkbench({
   const [addonQuote, setAddonQuote] = useState<SubscriptionAddOnBreakdown | null>(null);
   const [addonQuoteLoading, setAddonQuoteLoading] = useState(false);
   const [addonLoading, setAddonLoading] = useState(false);
+  const walletBalance = entitlement.organization.referralWalletPoints ?? 0;
+  const [useWalletPoints, setUseWalletPoints] = useState(walletBalance > 0);
+  const [useAddonWalletPoints, setUseAddonWalletPoints] = useState(walletBalance > 0);
+  const [walletPointsInput, setWalletPointsInput] = useState(
+    walletBalance > 0 ? String(walletBalance) : ""
+  );
+  const [addonWalletPointsInput, setAddonWalletPointsInput] = useState(
+    walletBalance > 0 ? String(walletBalance) : ""
+  );
 
   const extraBranches = useMemo(() => parseCount(extraBranchesInput), [extraBranchesInput]);
   const extraUsers = useMemo(() => parseCount(extraUsersInput), [extraUsersInput]);
   const addonBranches = useMemo(() => parseCount(addonBranchesInput), [addonBranchesInput]);
   const addonUsers = useMemo(() => parseCount(addonUsersInput), [addonUsersInput]);
+  const walletPointsToUse = useMemo(() => {
+    if (!useWalletPoints) return null;
+    const n = parseCount(walletPointsInput);
+    return n > 0 ? n : 0;
+  }, [useWalletPoints, walletPointsInput]);
+  const addonWalletPointsToUse = useMemo(() => {
+    if (!useAddonWalletPoints) return null;
+    const n = parseCount(addonWalletPointsInput);
+    return n > 0 ? n : 0;
+  }, [useAddonWalletPoints, addonWalletPointsInput]);
   const normalizedReferral = useMemo(() => {
     const trimmed = referralCode.trim();
     return trimmed.length > 0 ? trimmed : null;
   }, [referralCode]);
 
+  // Mid-cycle capacity: ACTIVE + unexpired. Ignore paymentStatus so a pending/failed
+  // renew checkout does not hide Add branch / user after a prior paid conversion.
   const canBuyAddOns =
     sub.status === "ACTIVE" &&
-    sub.paymentStatus === "PAID" &&
     (sub.daysRemaining == null || sub.daysRemaining > 0) &&
     (sub.effectiveMaxBranches != null || sub.effectiveMaxUsers != null);
   const canBuyBranchAddOn = sub.effectiveMaxBranches != null;
@@ -323,6 +344,8 @@ export function SubscriptionRenewalWorkbench({
           extraBranches,
           extraUsers,
           referralCode: normalizedReferral,
+          useWalletPoints,
+          walletPoints: walletPointsToUse,
         }
       )
         .then((data) => {
@@ -345,6 +368,8 @@ export function SubscriptionRenewalWorkbench({
     extraBranches,
     extraUsers,
     normalizedReferral,
+    useWalletPoints,
+    walletPointsToUse,
     selectedIsPayable,
   ]);
 
@@ -362,6 +387,8 @@ export function SubscriptionRenewalWorkbench({
         {
           extraBranches: canBuyBranchAddOn ? addonBranches : 0,
           extraUsers: canBuyUserAddOn ? addonUsers : 0,
+          useWalletPoints: useAddonWalletPoints,
+          walletPoints: addonWalletPointsToUse,
         }
       )
         .then((data) => {
@@ -378,7 +405,15 @@ export function SubscriptionRenewalWorkbench({
       cancelled = true;
       window.clearTimeout(timer);
     };
-  }, [canBuyAddOns, canBuyBranchAddOn, canBuyUserAddOn, addonBranches, addonUsers]);
+  }, [
+    canBuyAddOns,
+    canBuyBranchAddOn,
+    canBuyUserAddOn,
+    addonBranches,
+    addonUsers,
+    useAddonWalletPoints,
+    addonWalletPointsToUse,
+  ]);
 
   const submitAddOn = async () => {
     if (!canBuyAddOns) return;
@@ -395,7 +430,24 @@ export function SubscriptionRenewalWorkbench({
         notes: "Capacity add-on from settings",
         extraBranches: branches,
         extraUsers: users,
+        useWalletPoints: useAddonWalletPoints,
+        walletPoints: addonWalletPointsToUse,
       });
+
+      if (data.payment.status === "PAID") {
+        setEntitlement(data.entitlement);
+        toast.success("Add-on purchased", {
+          description:
+            (data.entitlement.organization.referralWalletPoints ?? 0) < walletBalance
+              ? "Paid with referral wallet points. Limits updated."
+              : "Your branch/user limits have been updated.",
+        });
+        setAddonBranchesInput("0");
+        setAddonUsersInput("0");
+        await Promise.resolve(onEntitlementUpdated?.());
+        await loadHistory();
+        return;
+      }
 
       if (data.checkout?.provider === "RAZORPAY") {
         try {
@@ -474,7 +526,22 @@ export function SubscriptionRenewalWorkbench({
         extraBranches,
         extraUsers,
         referralCode: normalizedReferral,
+        useWalletPoints,
+        walletPoints: walletPointsToUse,
       });
+
+      if (data.payment.status === "PAID") {
+        setEntitlement(data.entitlement);
+        toast.success("Payment successful", {
+          description:
+            (quote?.walletPointsApplied ?? 0) > 0
+              ? "Covered by referral wallet points. Your subscription is active."
+              : "Your subscription is active.",
+        });
+        await Promise.resolve(onEntitlementUpdated?.());
+        await loadHistory();
+        return;
+      }
 
       if (data.checkout?.provider === "RAZORPAY") {
         try {
@@ -715,6 +782,52 @@ export function SubscriptionRenewalWorkbench({
                     onChange={(e) => setExtraUsersInput(e.target.value)}
                   />
                 </div>
+                {(quote?.walletPointsAvailable ?? walletBalance) > 0 ? (
+                  <div className="space-y-1.5 sm:col-span-2">
+                    <div className="flex items-start gap-2">
+                      <Checkbox
+                        id="use-wallet-points"
+                        checked={useWalletPoints}
+                        onCheckedChange={(v) => {
+                          const on = v === true;
+                          setUseWalletPoints(on);
+                          if (on && !walletPointsInput) {
+                            setWalletPointsInput(
+                              String(quote?.walletPointsAvailable ?? walletBalance)
+                            );
+                          }
+                        }}
+                      />
+                      <Label
+                        htmlFor="use-wallet-points"
+                        className="text-xs font-normal leading-snug"
+                      >
+                        Use wallet points ({quote?.walletPointsAvailable ?? walletBalance} available
+                        · 1 pt = ₹1 before GST)
+                      </Label>
+                    </div>
+                    {useWalletPoints ? (
+                      <div className="flex items-center gap-2 pl-6">
+                        <Label htmlFor="wallet-points-amount" className="sr-only">
+                          Points to redeem
+                        </Label>
+                        <Input
+                          id="wallet-points-amount"
+                          type="number"
+                          min={1}
+                          max={quote?.walletPointsAvailable ?? walletBalance}
+                          className="h-9 w-28 tabular-nums"
+                          value={walletPointsInput}
+                          onChange={(e) => setWalletPointsInput(e.target.value)}
+                          placeholder="e.g. 100"
+                        />
+                        <span className="text-[11px] text-muted-foreground">
+                          points (max {quote?.walletPointsAvailable ?? walletBalance})
+                        </span>
+                      </div>
+                    ) : null}
+                  </div>
+                ) : null}
               </div>
 
               <div className="rounded-xl border bg-muted/30 p-3 text-sm">
@@ -761,6 +874,16 @@ export function SubscriptionRenewalWorkbench({
                         </span>
                       </div>
                     ) : null}
+                    {(quote.walletPointsDiscount ?? 0) > 0 ? (
+                      <div className="flex justify-between gap-2 text-xs">
+                        <span className="text-muted-foreground">
+                          Wallet ({quote.walletPointsApplied} pts)
+                        </span>
+                        <span className="tabular-nums">
+                          −{formatCurrency(quote.walletPointsDiscount ?? 0)}
+                        </span>
+                      </div>
+                    ) : null}
                     {quote.referralValidationMessage && !quote.referralApplied ? (
                       <p className="text-[10px] text-amber-600 dark:text-amber-400">
                         {quote.referralValidationMessage}
@@ -799,7 +922,13 @@ export function SubscriptionRenewalWorkbench({
                 onClick={() => void submitRenewal()}
                 disabled={renewLoading || quoteLoading}
               >
-                {renewLoading ? "Submitting…" : onlineCheckout ? "Pay" : "Request payment"}
+                {renewLoading
+                  ? "Submitting…"
+                  : quote && quote.finalAmount <= 0
+                    ? "Redeem points"
+                    : onlineCheckout
+                      ? "Pay"
+                      : "Request payment"}
               </Button>
             ) : (
               <PlanCtaButton
@@ -815,12 +944,30 @@ export function SubscriptionRenewalWorkbench({
         </div>
       </div>
 
-      {canBuyAddOns ? (
-        <div>
-          <h3 className="mb-3 flex items-center gap-2 text-sm font-semibold">
-            <Building2 className="h-4 w-4 text-primary" />
-            Add branch / user
-          </h3>
+      <div>
+        <h3 className="mb-1 flex items-center gap-2 text-sm font-semibold">
+          <Building2 className="h-4 w-4 text-primary" />
+          Add branch / user only
+        </h3>
+        <p className="mb-3 text-xs text-muted-foreground">
+          No plan change needed — purchase individual capacity for the rest of your current term.
+        </p>
+        {!canBuyAddOns ? (
+          <div className="rounded-lg border border-dashed bg-muted/20 px-3 py-3 text-sm text-muted-foreground">
+            {sub.status === "TRIAL" ? (
+              <>
+                Available after you convert from trial with a paid plan. Then you can buy extra
+                branches or users here without picking Starter / Growth again.
+              </>
+            ) : sub.daysRemaining != null && sub.daysRemaining <= 0 ? (
+              <>Subscription expired. Renew your plan above, then you can buy extra capacity here.</>
+            ) : sub.effectiveMaxBranches == null && sub.effectiveMaxUsers == null ? (
+              <>Your plan already has unlimited branches and users — no add-on purchase needed.</>
+            ) : (
+              <>Extra branch/user purchase is not available for this subscription right now.</>
+            )}
+          </div>
+        ) : (
           <div className="rounded-lg border bg-card p-4">
             <div className="mb-3 flex flex-wrap items-center gap-x-2 gap-y-1 text-xs text-muted-foreground">
               <span>Capacity only — expiry unchanged</span>
@@ -881,6 +1028,53 @@ export function SubscriptionRenewalWorkbench({
                       : "Unlimited on this plan"}
                   </p>
                 </div>
+                {(addonQuote?.walletPointsAvailable ?? walletBalance) > 0 ? (
+                  <div className="col-span-2 space-y-1.5">
+                    <div className="flex items-start gap-2">
+                      <Checkbox
+                        id="use-addon-wallet-points"
+                        checked={useAddonWalletPoints}
+                        onCheckedChange={(v) => {
+                          const on = v === true;
+                          setUseAddonWalletPoints(on);
+                          if (on && !addonWalletPointsInput) {
+                            setAddonWalletPointsInput(
+                              String(addonQuote?.walletPointsAvailable ?? walletBalance)
+                            );
+                          }
+                        }}
+                      />
+                      <Label
+                        htmlFor="use-addon-wallet-points"
+                        className="text-xs font-normal leading-snug"
+                      >
+                        Use wallet points (
+                        {addonQuote?.walletPointsAvailable ?? walletBalance} available · 1 pt = ₹1
+                        before GST)
+                      </Label>
+                    </div>
+                    {useAddonWalletPoints ? (
+                      <div className="flex items-center gap-2 pl-6">
+                        <Label htmlFor="addon-wallet-points-amount" className="sr-only">
+                          Points to redeem
+                        </Label>
+                        <Input
+                          id="addon-wallet-points-amount"
+                          type="number"
+                          min={1}
+                          max={addonQuote?.walletPointsAvailable ?? walletBalance}
+                          className="h-9 w-28 tabular-nums"
+                          value={addonWalletPointsInput}
+                          onChange={(e) => setAddonWalletPointsInput(e.target.value)}
+                          placeholder="e.g. 100"
+                        />
+                        <span className="text-[11px] text-muted-foreground">
+                          points (max {addonQuote?.walletPointsAvailable ?? walletBalance})
+                        </span>
+                      </div>
+                    ) : null}
+                  </div>
+                ) : null}
               </div>
 
               <div className="flex flex-col justify-between rounded-xl border bg-muted/30 p-3">
@@ -909,6 +1103,16 @@ export function SubscriptionRenewalWorkbench({
                           </span>
                           <span className="tabular-nums">
                             {formatCurrency(addonQuote.extraUserCost)}
+                          </span>
+                        </div>
+                      ) : null}
+                      {(addonQuote.walletPointsDiscount ?? 0) > 0 ? (
+                        <div className="flex justify-between gap-2 text-xs">
+                          <span className="text-muted-foreground">
+                            Wallet ({addonQuote.walletPointsApplied} pts)
+                          </span>
+                          <span className="tabular-nums">
+                            −{formatCurrency(addonQuote.walletPointsDiscount ?? 0)}
                           </span>
                         </div>
                       ) : null}
@@ -945,15 +1149,17 @@ export function SubscriptionRenewalWorkbench({
                 >
                   {addonLoading
                     ? "Submitting…"
-                    : onlineCheckout
-                      ? "Pay for add-on"
-                      : "Request add-on"}
+                    : addonQuote && addonQuote.finalAmount <= 0
+                      ? "Redeem points"
+                      : onlineCheckout
+                        ? "Pay for add-on"
+                        : "Request add-on"}
                 </Button>
               </div>
             </div>
           </div>
-        </div>
-      ) : null}
+        )}
+      </div>
 
       <div>
         <h3 className="mb-3 flex items-center gap-2 text-sm font-semibold">

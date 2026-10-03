@@ -906,11 +906,13 @@ export default function SettingsPage() {
                       <>
                         <p className="text-sm text-muted-foreground">
                           Share this link or code. A new workshop gets a discount on their first paid plan, and you
-                          earn 500 referral points when they pay.
+                          earn 500 referral points when they pay (1 point = ₹1 before GST). Redeem points on
+                          renew, upgrade, or branch/user add-ons.
                         </p>
                         {(entitlement.organization.referralWalletPoints ?? 0) > 0 ? (
                           <p className="text-sm font-medium">
-                            Wallet: {entitlement.organization.referralWalletPoints} points
+                            Wallet: {entitlement.organization.referralWalletPoints} points — use at checkout
+                            under Upgrade / Renew or Add branch / user.
                           </p>
                         ) : null}
                         <div className="flex flex-wrap items-center gap-2">
@@ -964,7 +966,11 @@ export default function SettingsPage() {
                 {/* Renewal Workbench */}
                 <Card id="renew-workbench">
                   <CardHeader className="pb-3">
-                    <CardTitle className="text-base">Choose / Renew Plan</CardTitle>
+                    <CardTitle className="text-base">Plan, renew & capacity</CardTitle>
+                    <p className="text-sm font-normal text-muted-foreground">
+                      Change plan or renew above. On a paid active subscription, buy extra branches or
+                      users below without changing your plan or expiry.
+                    </p>
                   </CardHeader>
                   <CardContent>
                     <SubscriptionRenewalWorkbench
