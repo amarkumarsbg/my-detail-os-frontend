@@ -197,7 +197,9 @@ export function SubscriptionRenewalWorkbench({
   const [termMonths, setTermMonths] = useState<number>(12);
   const [extraBranchesInput, setExtraBranchesInput] = useState("0");
   const [extraUsersInput, setExtraUsersInput] = useState("0");
-  const [referralCode, setReferralCode] = useState(() => peekSaasReferral() ?? "");
+  const [referralCode, setReferralCode] = useState(
+    () => peekSaasReferral() ?? entitlement.organization.referralCode ?? ""
+  );
   const [quote, setQuote] = useState<SubscriptionPricingBreakdown | null>(null);
   const [history, setHistory] = useState<SubscriptionRenewalHistoryRow[]>([]);
   const [quoteLoading, setQuoteLoading] = useState(false);

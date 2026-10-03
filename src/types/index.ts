@@ -18,6 +18,8 @@ export type OrganizationEntitlement = {
     name: string;
     slug: string | null;
     shareReferralCode?: string | null;
+    /** Partner code used at public signup (`?ref=`). Prefills checkout. */
+    referralCode?: string | null;
     referralWalletPoints?: number;
   };
   subscription: {

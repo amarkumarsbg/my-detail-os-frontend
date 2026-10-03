@@ -266,6 +266,12 @@ export function SubscriptionRenewDialog({
   const [referralCode, setReferralCode] = useState(() => peekSaasReferral() ?? "");
   const [quote, setQuote] = useState<SubscriptionPricingBreakdown | null>(null);
 
+  useEffect(() => {
+    if (referralCode.trim()) return;
+    const stored = peekSaasReferral() ?? entitlement?.organization.referralCode;
+    if (stored) setReferralCode(stored);
+  }, [entitlement?.organization.referralCode, referralCode]);
+
   const sub = entitlement?.subscription;
   const isTrial = sub?.status === "TRIAL";
   const selectedIsPayable = SELF_SERVE_PLANS.includes(planCode);
@@ -306,17 +312,17 @@ export function SubscriptionRenewDialog({
     if (!open) return;
     const current = (sub?.planCode as PlanCode | undefined) ?? "STARTER";
     setPlanCode(
-      isTrial
-        ? RECOMMENDED_PLAN
-        : SELF_SERVE_PLANS.includes(current)
-          ? current
-          : RECOMMENDED_PLAN
+      SELF_SERVE_PLANS.includes(current) || current === "ENTERPRISE"
+        ? current
+        : RECOMMENDED_PLAN
     );
     // Always open on yearly — matches the plan card “1-year base” people expect.
     setTermMonths(12);
     setExtraBranchesInput("0");
     setExtraUsersInput("0");
-    setReferralCode("");
+    setReferralCode(
+      peekSaasReferral() ?? entitlement?.organization.referralCode ?? ""
+    );
     setQuote(null);
 
     let cancelled = false;
@@ -339,7 +345,7 @@ export function SubscriptionRenewDialog({
     return () => {
       cancelled = true;
     };
-  }, [open, sub?.planCode, sub?.termMonths, isTrial]);
+  }, [open, sub?.planCode, sub?.termMonths, entitlement?.organization.referralCode]);
 
   useEffect(() => {
     if (termOptions.length === 0) return;
