@@ -1,16 +1,27 @@
 "use client";
 
 import { create } from "zustand";
-import type { SupportTicket, SupportTicketMessage } from "@/types";
-import { deleteCollectionDocument, putCollectionDocument, postCollectionSnapshot } from "@/lib/collection-sync";
+import type { SupportTicket, SupportTicketAttachment, SupportTicketMessage } from "@/types";
+import {
+  deleteCollectionDocument,
+  getCollectionDocument,
+  putCollectionDocument,
+  postCollectionSnapshot,
+} from "@/lib/collection-sync";
 
 interface SupportTicketStore {
   tickets: SupportTicket[];
   setTickets: (items: SupportTicket[]) => void;
   addTicket: (ticket: SupportTicket) => Promise<void>;
   updateTicket: (id: string, patch: Partial<SupportTicket>) => Promise<void>;
-  appendMessage: (id: string, message: SupportTicketMessage) => Promise<void>;
+  appendMessage: (
+    id: string,
+    message: SupportTicketMessage,
+    newAttachments?: SupportTicketAttachment[]
+  ) => Promise<void>;
   removeTicket: (id: string) => Promise<void>;
+  /** Pull latest ticket from API before local merge (avoids clobbering platform replies). */
+  refreshTicket: (id: string) => Promise<SupportTicket | null>;
 }
 
 export const useSupportTicketStore = create<SupportTicketStore>((set, get) => ({
@@ -31,14 +42,45 @@ export const useSupportTicketStore = create<SupportTicketStore>((set, get) => ({
     set((s) => ({ tickets: s.tickets.map((t) => (t.id === id ? next : t)) }));
   },
 
-  appendMessage: async (id, message) => {
-    const prev = get().tickets.find((t) => t.id === id);
+  refreshTicket: async (id) => {
+    try {
+      const latest = await getCollectionDocument<SupportTicket>("supportTickets", id);
+      if (!latest?.id) return null;
+      set((s) => ({
+        tickets: s.tickets.some((t) => t.id === id)
+          ? s.tickets.map((t) => (t.id === id ? latest : t))
+          : [latest, ...s.tickets],
+      }));
+      return latest;
+    } catch {
+      return get().tickets.find((t) => t.id === id) ?? null;
+    }
+  },
+
+  appendMessage: async (id, message, newAttachments) => {
+    let prev = get().tickets.find((t) => t.id === id) ?? null;
+    try {
+      const latest = await getCollectionDocument<SupportTicket>("supportTickets", id);
+      if (latest?.id) prev = latest;
+    } catch {
+      /* use local */
+    }
     if (!prev) return;
+
+    const already = prev.messages.some((m) => m.id === message.id);
+    const messages = already ? prev.messages : [...prev.messages, message];
+    const attachments = newAttachments?.length
+      ? [...(prev.attachments ?? []), ...newAttachments]
+      : prev.attachments ?? [];
     const next: SupportTicket = {
       ...prev,
-      messages: [...prev.messages, message],
+      messages,
+      attachments,
       updatedAt: new Date().toISOString(),
-      status: prev.status === "RESOLVED" || prev.status === "CLOSED" ? "OPEN" : prev.status,
+      status:
+        prev.status === "RESOLVED" || prev.status === "CLOSED" || prev.status === "WAITING_ON_CUSTOMER"
+          ? "OPEN"
+          : prev.status,
     };
     await putCollectionDocument("supportTickets", id, next);
     set((s) => ({ tickets: s.tickets.map((t) => (t.id === id ? next : t)) }));

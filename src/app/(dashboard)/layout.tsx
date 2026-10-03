@@ -209,13 +209,19 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
           <SubscriptionRenewBanner />
           <main
             ref={mainScrollRef}
-            className="min-h-0 min-w-0 flex-1 overflow-y-auto overflow-x-hidden p-4 pb-[calc(4.5rem+env(safe-area-inset-bottom))] md:p-6 md:pb-6 md:[scrollbar-gutter:stable]"
+            className={cn(
+              "min-h-0 min-w-0 flex-1 overflow-x-hidden p-4 pb-[calc(4.5rem+env(safe-area-inset-bottom))] md:p-6 md:pb-6 md:[scrollbar-gutter:stable]",
+              // Support chat: lock page scroll so only the thread/list scroll internally.
+              appPath === "/support"
+                ? "flex flex-col overflow-hidden"
+                : "overflow-y-auto"
+            )}
             style={{ WebkitOverflowScrolling: "touch" }}
           >
             {bootstrapError ? (
               <div
                 role="alert"
-                className="mb-4 rounded-lg border border-destructive/40 bg-destructive/5 px-4 py-3 text-sm"
+                className="mb-4 shrink-0 rounded-lg border border-destructive/40 bg-destructive/5 px-4 py-3 text-sm"
               >
                 <p className="font-medium text-destructive">Could not load data from the API</p>
                 <p className="mt-1 text-muted-foreground">{bootstrapError}</p>
@@ -232,7 +238,11 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
             ) : null}
             <AppDataSync />
             <DomainDataSync />
-            {children}
+            {appPath === "/support" ? (
+              <div className="flex min-h-0 flex-1 flex-col overflow-hidden">{children}</div>
+            ) : (
+              children
+            )}
           </main>
           <ScrollToTopButton scrollContainerRef={mainScrollRef} />
           <MobileBottomNav />

@@ -65,8 +65,13 @@ export interface OfferBroadcast {
 }
 
 export type SupportTicketCategory = "BUG" | "FEATURE";
-export type SupportTicketPriority = "LOW" | "MEDIUM" | "HIGH";
-export type SupportTicketStatus = "OPEN" | "IN_PROGRESS" | "RESOLVED" | "CLOSED";
+export type SupportTicketPriority = "LOW" | "MEDIUM" | "HIGH" | "URGENT";
+export type SupportTicketStatus =
+  | "OPEN"
+  | "IN_PROGRESS"
+  | "WAITING_ON_CUSTOMER"
+  | "RESOLVED"
+  | "CLOSED";
 
 export interface SupportTicketAttachment {
   id: string;
@@ -97,6 +102,9 @@ export interface SupportTicket {
   status: SupportTicketStatus;
   createdByUserId?: string;
   createdByName: string;
+  /** Denormalized for platform admin inbox (row still scoped by AppJsonRow.organizationId). */
+  organizationId?: string;
+  organizationName?: string;
   attachments: SupportTicketAttachment[];
   messages: SupportTicketMessage[];
   createdAt: string;
