@@ -18,6 +18,7 @@ export type OrganizationEntitlement = {
     name: string;
     slug: string | null;
     shareReferralCode?: string | null;
+    referralWalletPoints?: number;
   };
   subscription: {
     planCode: PlanCode;
@@ -100,6 +101,7 @@ export type SubscriptionPricingBreakdown = {
   referralApplied: boolean;
   referralEligible: boolean;
   referralValidationMessage: string | null;
+  referrerOrganizationId?: string | null;
   gstPercent: number;
   gstAmount: number;
   subTotalBeforeTax: number;

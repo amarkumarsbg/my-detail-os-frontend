@@ -1,4 +1,5 @@
 import type { Metadata, Viewport } from "next";
+import { Suspense } from "react";
 import { Inter } from "next/font/google";
 import { Toaster } from "sonner";
 import { ThemeProvider } from "@/components/shared/theme-provider";
@@ -6,6 +7,7 @@ import { BrandThemeApplier } from "@/components/shared/brand-theme-applier";
 import { AttendanceRealtimeSync } from "@/components/attendance/attendance-realtime-sync";
 import { VisualViewportCssVars } from "@/components/shared/visual-viewport-css-vars";
 import { TenantProvider } from "@/components/tenant/tenant-context";
+import { CaptureSaasReferral } from "@/lib/saas-referral";
 import "./globals.css";
 
 const inter = Inter({
@@ -73,6 +75,9 @@ export default function RootLayout({
           <TenantProvider>
             <BrandThemeApplier />
             <VisualViewportCssVars />
+            <Suspense fallback={null}>
+              <CaptureSaasReferral />
+            </Suspense>
             <AttendanceRealtimeSync />
             {children}
             <Toaster position="top-right" richColors closeButton />

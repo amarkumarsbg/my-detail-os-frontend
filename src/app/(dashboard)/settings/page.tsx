@@ -30,6 +30,7 @@ import {
   dialogMobileSheetHeaderClasses,
 } from "@/components/ui/dialog";
 import { cn, formatDate } from "@/lib/utils";
+import { marketingSignupUrl } from "@/lib/marketing-site";
 import { useSettingsStore } from "@/store/settings-store";
 import { useCustomerRewardSettingsStore } from "@/store/customer-reward-settings-store";
 import { useServiceCatalogStore } from "@/store/service-catalog-store";
@@ -904,9 +905,14 @@ export default function SettingsPage() {
                     ) : entitlement.organization.shareReferralCode ? (
                       <>
                         <p className="text-sm text-muted-foreground">
-                          Share this code with other workshops. They can apply it on first paid conversion for a
-                          platform discount.
+                          Share this link or code. A new workshop gets a discount on their first paid plan, and you
+                          earn 500 referral points when they pay.
                         </p>
+                        {(entitlement.organization.referralWalletPoints ?? 0) > 0 ? (
+                          <p className="text-sm font-medium">
+                            Wallet: {entitlement.organization.referralWalletPoints} points
+                          </p>
+                        ) : null}
                         <div className="flex flex-wrap items-center gap-2">
                           <code className="rounded-lg border bg-muted/50 px-3 py-2 font-mono text-lg font-semibold tracking-wide">
                             {entitlement.organization.shareReferralCode}
@@ -925,7 +931,24 @@ export default function SettingsPage() {
                             }}
                           >
                             <Copy className="mr-1.5 h-3.5 w-3.5" />
-                            Copy
+                            Copy code
+                          </Button>
+                          <Button
+                            type="button"
+                            variant="outline"
+                            size="sm"
+                            onClick={() => {
+                              const code = entitlement.organization.shareReferralCode;
+                              if (!code) return;
+                              const url = `${marketingSignupUrl()}?ref=${encodeURIComponent(code)}`;
+                              void navigator.clipboard.writeText(url).then(
+                                () => toast.success("Referral link copied"),
+                                () => toast.error("Could not copy link")
+                              );
+                            }}
+                          >
+                            <Copy className="mr-1.5 h-3.5 w-3.5" />
+                            Copy link
                           </Button>
                         </div>
                       </>

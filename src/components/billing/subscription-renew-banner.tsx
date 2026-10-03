@@ -29,6 +29,7 @@ import {
 import { PlanCtaButton } from "@/components/billing/plan-cta-link";
 import type { OrganizationEntitlement, PlanCode, SubscriptionPricingBreakdown } from "@/types";
 import { openRazorpayCheckout, type RazorpayCheckoutPayload } from "@/lib/razorpay-checkout";
+import { peekSaasReferral } from "@/lib/saas-referral";
 
 type RenewResult = {
   entitlement: OrganizationEntitlement;
@@ -262,7 +263,7 @@ export function SubscriptionRenewDialog({
   const [termMonths, setTermMonths] = useState<number>(12);
   const [extraBranchesInput, setExtraBranchesInput] = useState("0");
   const [extraUsersInput, setExtraUsersInput] = useState("0");
-  const [referralCode, setReferralCode] = useState("");
+  const [referralCode, setReferralCode] = useState(() => peekSaasReferral() ?? "");
   const [quote, setQuote] = useState<SubscriptionPricingBreakdown | null>(null);
 
   const sub = entitlement?.subscription;
@@ -566,13 +567,12 @@ export function SubscriptionRenewDialog({
                     id="cfg-referral"
                     className="h-9"
                     value={referralCode}
-                    onChange={(e) => setReferralCode(e.target.value)}
-                    placeholder={
-                      addOns.referralDiscount
-                        ? `Optional (−${formatCurrency(addOns.referralDiscount)})`
-                        : "Optional"
-                    }
+                    onChange={(e) => setReferralCode(e.target.value.toUpperCase())}
+                    placeholder="Optional partner code"
                   />
+                  {quote?.referralValidationMessage ? (
+                    <p className="text-xs text-destructive">{quote.referralValidationMessage}</p>
+                  ) : null}
                 </div>
                 <div className="space-y-1">
                   <Label htmlFor="cfg-branches" className="text-xs">
