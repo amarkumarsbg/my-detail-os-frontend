@@ -112,9 +112,15 @@ import { useMembershipStore, computeMembershipEndDate, membershipTierDurationLab
 import { filterMembershipPackagesForVehicleSegment } from "@/lib/membership-package-eligibility";
 import { useInvoiceStore } from "@/store/invoice-store";
 import { useInventoryStore } from "@/store/inventory-store";
+import { useOfferStore } from "@/store/offer-store";
 import { useAppointmentStore } from "@/store/appointment-store";
 import { customerHasPendingInvoiceDues } from "@/lib/party/ledger-math";
 import { useBranchScope } from "@/lib/branch-scope";
+import {
+  computeOfferCouponDiscount,
+  findOfferByCode,
+  splitOfferCouponDiscount,
+} from "@/lib/offer-coupon";
 import { formatCurrency, cn } from "@/lib/utils";
 import {
   INDIAN_VEHICLE_REG_HINT,
@@ -356,6 +362,8 @@ export function CreateBookingPage({ variant }: { variant: CreateBookingVariant }
   const [mechanicIncentivePercentOverride, setMechanicIncentivePercentOverride] = useState("");
   const [couponCode, setCouponCode] = useState("");
   const [couponApplied, setCouponApplied] = useState(false);
+  const [appliedCouponCode, setAppliedCouponCode] = useState<string | null>(null);
+  const offers = useOfferStore((s) => s.offers);
   const [directDiscountType, setDirectDiscountType] = useState<"percentage" | "fixed">("percentage");
   const [directDiscountValue, setDirectDiscountValue] = useState("");
   const [branchId, setBranchId] = useState("");
@@ -1288,10 +1296,84 @@ export function CreateBookingPage({ variant }: { variant: CreateBookingVariant }
     [selectedHighEndIds, highEndServices, vehicleSegment]
   );
 
+  const couponEvalContext = useMemo(() => {
+    const serviceAmountsById: Record<string, number> = {};
+    if (vehicleSegment) {
+      for (const s of selectedCatalogItems) {
+        const isMain = selectedMainIds.includes(s.id);
+        if (isMain && membershipMainServiceZeroIds.has(s.id)) {
+          serviceAmountsById[s.id] = 0;
+          continue;
+        }
+        const catalogPrice = catalogPriceForSegment(s, vehicleSegment);
+        const custom = customPriceByServiceId[s.id];
+        serviceAmountsById[s.id] = custom != null ? custom : catalogPrice;
+      }
+    }
+    const partAmountsById: Record<string, number> = {};
+    for (const line of selectedPartSummaryLines) {
+      partAmountsById[line.id] = line.amount;
+    }
+    return {
+      customerId: existingCustomerId,
+      servicesSubtotal: catalogSubtotalExclGst,
+      partsSubtotal: partsSubtotalExclGst,
+      selectedServiceIds: [...selectedMainIds, ...selectedAddonIds],
+      selectedPartIds: selectedPartLines.map((l) => l.partId),
+      serviceAmountsById,
+      partAmountsById,
+    };
+  }, [
+    vehicleSegment,
+    selectedCatalogItems,
+    selectedMainIds,
+    selectedAddonIds,
+    membershipMainServiceZeroIds,
+    customPriceByServiceId,
+    selectedPartSummaryLines,
+    existingCustomerId,
+    catalogSubtotalExclGst,
+    partsSubtotalExclGst,
+    selectedPartLines,
+  ]);
+
   const discountAmount = useMemo(() => {
-    if (!couponApplied) return 0;
-    return Math.round(catalogSubtotalExclGst * 0.1 * 100) / 100;
-  }, [couponApplied, catalogSubtotalExclGst]);
+    if (!couponApplied || !appliedCouponCode) return 0;
+    const offer = findOfferByCode(offers, appliedCouponCode);
+    if (offer) {
+      const result = computeOfferCouponDiscount(offer, couponEvalContext);
+      return result.ok ? result.amount : 0;
+    }
+    if (appliedCouponCode === "WELCOME10") {
+      return Math.round(catalogSubtotalExclGst * 0.1 * 100) / 100;
+    }
+    return 0;
+  }, [
+    couponApplied,
+    appliedCouponCode,
+    offers,
+    couponEvalContext,
+    catalogSubtotalExclGst,
+  ]);
+
+  const couponDiscountSplit = useMemo(() => {
+    if (!couponApplied || !appliedCouponCode || !(discountAmount > 0)) {
+      return { services: 0, parts: 0 };
+    }
+    const offer = findOfferByCode(offers, appliedCouponCode);
+    if (!offer) {
+      return appliedCouponCode === "WELCOME10"
+        ? { services: discountAmount, parts: 0 }
+        : { services: 0, parts: 0 };
+    }
+    return splitOfferCouponDiscount(offer, couponEvalContext, discountAmount);
+  }, [
+    couponApplied,
+    appliedCouponCode,
+    discountAmount,
+    offers,
+    couponEvalContext,
+  ]);
 
   const directDiscountAmount = useMemo(() => {
     const val = directDiscountValue.trim();
@@ -1306,8 +1388,8 @@ export function CreateBookingPage({ variant }: { variant: CreateBookingVariant }
   }, [directDiscountType, directDiscountValue, catalogSubtotalExclGst]);
 
   const totalDiscount = useMemo(() => {
-    return Math.min(catalogSubtotalExclGst, discountAmount + directDiscountAmount);
-  }, [catalogSubtotalExclGst, discountAmount, directDiscountAmount]);
+    return Math.round((discountAmount + directDiscountAmount) * 100) / 100;
+  }, [discountAmount, directDiscountAmount]);
 
   const membershipActivationPreviewAmount = useMemo(() => {
     if (!wizardMembershipPackageId) return 0;
@@ -1317,11 +1399,15 @@ export function CreateBookingPage({ variant }: { variant: CreateBookingVariant }
   }, [wizardMembershipPackageId, membershipPackagesAll]);
 
   /** Catalog after coupon + high-end program amounts + parts (all excl. GST). */
-  const afterDiscount =
-    Math.max(0, catalogSubtotalExclGst - totalDiscount) +
-    highEndSubtotalExclGst +
-    partsSubtotalExclGst +
-    membershipActivationPreviewAmount;
+  const afterDiscount = Math.max(
+    0,
+    catalogSubtotalExclGst +
+      highEndSubtotalExclGst +
+      partsSubtotalExclGst +
+      membershipActivationPreviewAmount -
+      discountAmount -
+      directDiscountAmount
+  );
   const { taxAmount: gstAmount, grandTotal: totalPayable } = computeGstFromSubtotal(
     afterDiscount,
     isGstRegistered ? "REGISTERED" : "NOT_REGISTERED"
@@ -1373,12 +1459,36 @@ export function CreateBookingPage({ variant }: { variant: CreateBookingVariant }
   };
 
   const applyCoupon = () => {
-    if (couponCode.trim().toUpperCase() === "WELCOME10") {
+    const code = couponCode.trim().toUpperCase();
+    if (!code) {
+      toast.error("Enter a coupon code");
+      return;
+    }
+    const offer = findOfferByCode(offers, code);
+    if (offer) {
+      const result = computeOfferCouponDiscount(offer, couponEvalContext);
+      if (!result.ok) {
+        setCouponApplied(false);
+        setAppliedCouponCode(null);
+        toast.error(result.error);
+        return;
+      }
+      setAppliedCouponCode(code);
+      setCouponApplied(true);
+      toast.success(
+        `${offer.code} applied — ${formatCurrency(result.amount)} off (before tax)`
+      );
+      return;
+    }
+    if (code === "WELCOME10") {
+      setAppliedCouponCode(code);
       setCouponApplied(true);
       toast.success("10% off applied to services (before tax)");
-    } else if (couponCode.trim()) {
-      toast.error("Invalid code — try WELCOME10");
+      return;
     }
+    setCouponApplied(false);
+    setAppliedCouponCode(null);
+    toast.error("Invalid coupon code");
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -1690,10 +1800,13 @@ export function CreateBookingPage({ variant }: { variant: CreateBookingVariant }
         custom != null
           ? withCustomPrice(catalogPrice, custom).price
           : catalogPrice;
+      const serviceCoupon = couponDiscountSplit.services;
       const share =
-        catalogSubtotalExclGst > 0 ? base / catalogSubtotalExclGst : 1 / selectedCatalogItems.length;
+        catalogSubtotalExclGst > 0
+          ? base / catalogSubtotalExclGst
+          : 1 / selectedCatalogItems.length;
       const discounted =
-        Math.round((base - discountAmount * share + Number.EPSILON) * 100) / 100;
+        Math.round((base - serviceCoupon * share + Number.EPSILON) * 100) / 100;
       const priced =
         custom != null
           ? {
@@ -1715,15 +1828,37 @@ export function CreateBookingPage({ variant }: { variant: CreateBookingVariant }
       };
     });
 
+    let jobCardPartItems: JobCardPartItem[] = isJobCard
+      ? buildJobCardPartItems(id, selectedPartLines, inventoryParts)
+      : [];
+    const partsCoupon = couponDiscountSplit.parts;
+    if (partsCoupon > 0 && jobCardPartItems.length > 0) {
+      const partsTotal = jobCardPartsSubtotal(jobCardPartItems);
+      if (partsTotal > 0) {
+        jobCardPartItems = jobCardPartItems.map((item) => {
+          const share = item.lineTotal / partsTotal;
+          const nextTotal =
+            Math.round((item.lineTotal - partsCoupon * share + Number.EPSILON) * 100) / 100;
+          const nextUnit =
+            item.quantity > 0
+              ? Math.round((Math.max(0, nextTotal) / item.quantity) * 100) / 100
+              : item.unitPrice;
+          return {
+            ...item,
+            lineTotal: Math.max(0, nextTotal),
+            unitPrice: nextUnit,
+            isCustomPrice: true,
+            priceSource: "CUSTOM" as const,
+          };
+        });
+      }
+    }
+
     const estimatedAmount =
       serviceItems.reduce((s, x) => s + x.price, 0) +
       highEndSubtotalExclGst +
-      (isJobCard ? jobCardPartsSubtotal(buildJobCardPartItems(id, selectedPartLines, inventoryParts)) : 0) +
+      (isJobCard ? jobCardPartsSubtotal(jobCardPartItems) : 0) +
       (activatedMembershipMeta?.amount ?? 0);
-
-    const jobCardPartItems: JobCardPartItem[] = isJobCard
-      ? buildJobCardPartItems(id, selectedPartLines, inventoryParts)
-      : [];
     const customIncRaw = mechanicIncentivePercentOverride.trim();
     let incentivePercentFinal = catalogAvgIncentivePercent;
     if (customIncRaw !== "") {
@@ -1777,7 +1912,9 @@ export function CreateBookingPage({ variant }: { variant: CreateBookingVariant }
       [
         customerNotes && `Customer: ${customerNotes}`,
         internalNotes && `Internal: ${internalNotes}`,
-        couponApplied && "Coupon: WELCOME10",
+        couponApplied &&
+          appliedCouponCode &&
+          `Coupon: ${appliedCouponCode}${discountAmount > 0 ? ` (−${formatCurrency(discountAmount)})` : ""}`,
         directDiscountValue.trim() !== "" &&
           `Direct Discount: ${directDiscountType === "percentage" ? `${directDiscountValue}%` : `₹${directDiscountValue}`}`,
       ]
@@ -2704,11 +2841,17 @@ export function CreateBookingPage({ variant }: { variant: CreateBookingVariant }
           <Input
             placeholder="ENTER CODE"
             value={couponCode}
-            onChange={(e) => setCouponCode(e.target.value.toUpperCase())}
+            onChange={(e) => {
+              setCouponCode(e.target.value.toUpperCase());
+              if (couponApplied) {
+                setCouponApplied(false);
+                setAppliedCouponCode(null);
+              }
+            }}
             className={cn("uppercase text-xs", compactJobCardDesktop && "h-8 text-[11px]")}
           />
           <Button type="button" variant="secondary" size="sm" onClick={applyCoupon} className={cn(compactJobCardDesktop && "h-8 px-2.5 text-xs")}>
-            Apply
+            {couponApplied ? "Applied" : "Apply"}
           </Button>
         </div>
         <Separator className={cn(compactJobCardDesktop ? "my-1" : "my-2")} />

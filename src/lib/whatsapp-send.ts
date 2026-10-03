@@ -11,7 +11,7 @@ import type { CustomerMessage } from "@/types";
 const WA_ME_PREFILL_SAFE_MAX = 1500;
 
 export async function sendCustomerWhatsApp(
-  phone: string, 
+  phone: string,
   message: string,
   template?: { contentSid?: string; contentVariables?: Record<string, string> }
 ): Promise<CustomerMessage | null> {

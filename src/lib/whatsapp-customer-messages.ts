@@ -224,8 +224,13 @@ export function buildOfferBroadcastWhatsAppMessage(
   offer: {
     name: string;
     code: string;
+    validFrom?: string;
     validTill: string;
+    discountType?: "PERCENTAGE" | "FLAT";
+    discountValue?: number;
+    minBillAmount?: number;
     maxDiscount: number;
+    applicableOn?: "FULL_BILL" | "SERVICES" | "SPARE_PARTS";
     details: string;
   },
   customerName: string,
@@ -237,14 +242,60 @@ export function buildOfferBroadcastWhatsAppMessage(
     trimmedName === OFFER_CUSTOMER_NAME_PLACEHOLDER
       ? OFFER_CUSTOMER_NAME_PLACEHOLDER
       : trimmedName.split(/\s+/)[0] || "there";
-  let validLabel = offer.validTill.trim();
-  try {
-    if (validLabel) validLabel = format(parseISO(validLabel), "dd MMM yyyy");
-  } catch {
-    /* keep raw */
+
+  const fmtDay = (raw: string) => {
+    const v = raw.trim();
+    if (!v) return "";
+    try {
+      return format(parseISO(v), "dd MMM yyyy");
+    } catch {
+      return v;
+    }
+  };
+
+  const validFromLabel = offer.validFrom ? fmtDay(offer.validFrom) : "";
+  const validTillLabel = fmtDay(offer.validTill);
+
+  const discountValue =
+    typeof offer.discountValue === "number" && offer.discountValue > 0
+      ? offer.discountValue
+      : 0;
+  let discountLine: string | null = null;
+  if (discountValue > 0) {
+    if (offer.discountType === "FLAT") {
+      discountLine = `Discount: *${formatCurrency(discountValue)}*`;
+    } else {
+      const cap =
+        offer.maxDiscount > 0
+          ? ` (max ${formatCurrency(offer.maxDiscount)})`
+          : "";
+      discountLine = `Discount: *${discountValue}%*${cap}`;
+    }
+  } else if (offer.maxDiscount > 0) {
+    discountLine = `Max. discount: *${formatCurrency(offer.maxDiscount)}*`;
   }
-  const discount =
-    offer.maxDiscount > 0 ? formatCurrency(offer.maxDiscount) : null;
+
+  const applicable =
+    offer.applicableOn === "SERVICES"
+      ? "Services"
+      : offer.applicableOn === "SPARE_PARTS"
+        ? "Spare parts"
+        : offer.applicableOn === "FULL_BILL"
+          ? "Full bill"
+          : null;
+
+  const minBill =
+    typeof offer.minBillAmount === "number" && offer.minBillAmount > 0
+      ? `Min. bill: *${formatCurrency(offer.minBillAmount)}*`
+      : null;
+
+  const validity =
+    validFromLabel && validTillLabel
+      ? `Valid: *${validFromLabel}* – *${validTillLabel}*`
+      : validTillLabel
+        ? `Valid till: *${validTillLabel}*`
+        : null;
+
   return [
     `Hi *${first}*!`,
     ``,
@@ -253,8 +304,10 @@ export function buildOfferBroadcastWhatsAppMessage(
     offer.details.trim() || null,
     ``,
     offer.code.trim() ? `Coupon code: *${offer.code.trim()}*` : null,
-    discount ? `Max. discount: *${discount}*` : null,
-    validLabel ? `Valid till: *${validLabel}*` : null,
+    discountLine,
+    minBill,
+    applicable ? `Applies on: *${applicable}*` : null,
+    validity,
     ``,
     `Book your service and mention this code at the counter.`,
     ``,

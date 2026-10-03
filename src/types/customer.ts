@@ -46,16 +46,38 @@ export interface FollowUp {
   updatedAt: string;
 }
 
+export type OfferDiscountType = "PERCENTAGE" | "FLAT";
+export type OfferApplicableOn = "FULL_BILL" | "SERVICES" | "SPARE_PARTS";
+export type OfferScope = "ALL_ITEMS" | "SPECIFIC_ITEMS";
+
 /** Workshop promotional offer / WhatsApp broadcast (JSON collection `offers`). */
 export interface OfferBroadcast {
   id: string;
   name: string;
   code: string;
+  /** Optional start date (YYYY-MM-DD). Empty/undefined = active immediately. */
+  validFrom?: string;
   validTill: string;
+  /** Percentage or flat discount amount. Legacy offers may omit this. */
+  discountType?: OfferDiscountType;
+  discountValue?: number;
+  /** Minimum bill on the eligible base before the coupon applies. */
+  minBillAmount?: number;
+  /** Cap for percentage discounts (₹). Also used as legacy “max discount” copy. */
   maxDiscount: number;
+  /** What the coupon reduces: full bill, services only, or spare parts only. */
+  applicableOn?: OfferApplicableOn;
+  /** Whether all items in the applicable category qualify, or only listed ids. */
+  scope?: OfferScope;
+  /** Service catalog / inventory part ids when `scope` is `SPECIFIC_ITEMS`. */
+  applicableItemIds?: string[];
   details: string;
   /** Editable WhatsApp body; may include `{{name}}` for per-recipient first name. */
   customMessage?: string;
+  /**
+   * Broadcast recipients. When non-empty, coupon apply is limited to these customers
+   * (empty = all customers).
+   */
   selectedCustomerIds: string[];
   status: "DRAFT" | "SENT";
   sentAt?: string;

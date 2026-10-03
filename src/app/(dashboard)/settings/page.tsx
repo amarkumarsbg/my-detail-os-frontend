@@ -1039,6 +1039,7 @@ export default function SettingsPage() {
             )}
           </div>
         </TabsContent>
+
         <TabsContent value="business">
           <Card>
             <CardHeader>

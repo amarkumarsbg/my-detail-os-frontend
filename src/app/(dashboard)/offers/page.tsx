@@ -19,9 +19,15 @@ import {
 } from "@/components/ui/select";
 import { useCustomerStore } from "@/store/customer-store";
 import { useOfferStore } from "@/store/offer-store";
+import { useServiceCatalogStore } from "@/store/service-catalog-store";
+import { useInventoryStore } from "@/store/inventory-store";
 import { useSettingsStore } from "@/store/settings-store";
 import { useNotificationStore } from "@/store/notification-store";
 import { ApiError } from "@/lib/api-client";
+import {
+  formatOfferApplicableLabel,
+  formatOfferDiscountLabel,
+} from "@/lib/offer-coupon";
 import {
   OFFER_CUSTOMER_NAME_PLACEHOLDER,
   buildOfferBroadcastWhatsAppMessage,
@@ -33,7 +39,12 @@ import {
   isWhatsAppNotConfiguredError,
 } from "@/lib/whatsapp-send";
 import { cn, formatCurrency, formatDate, getInitials } from "@/lib/utils";
-import type { OfferBroadcast } from "@/types";
+import type {
+  OfferApplicableOn,
+  OfferBroadcast,
+  OfferDiscountType,
+  OfferScope,
+} from "@/types";
 
 const SEND_DELAY_MS = 350;
 const PREVIEW_SAMPLE_NAME = "Customer";
@@ -114,8 +125,16 @@ export default function OffersPage() {
 
   const [name, setName] = useState("");
   const [code, setCode] = useState("");
+  const [validFrom, setValidFrom] = useState("");
   const [validTill, setValidTill] = useState("");
+  const [discountType, setDiscountType] = useState<OfferDiscountType>("PERCENTAGE");
+  const [discountValueInput, setDiscountValueInput] = useState("");
+  const [minBillInput, setMinBillInput] = useState("");
   const [maxDiscountInput, setMaxDiscountInput] = useState("");
+  const [applicableOn, setApplicableOn] = useState<OfferApplicableOn>("FULL_BILL");
+  const [scope, setScope] = useState<OfferScope>("ALL_ITEMS");
+  const [applicableItemIds, setApplicableItemIds] = useState<Set<string>>(new Set());
+  const [itemSearch, setItemSearch] = useState("");
   const [details, setDetails] = useState("");
   const [messageText, setMessageText] = useState("");
   const [messageDirty, setMessageDirty] = useState(false);
@@ -125,11 +144,26 @@ export default function OffersPage() {
   const [sending, setSending] = useState(false);
   const [loadOfferId, setLoadOfferId] = useState<string>("");
 
+  const serviceCatalog = useServiceCatalogStore((s) => s.catalog);
+  const inventoryParts = useInventoryStore((s) => s.parts);
+
   useEffect(() => {
     if (!isInitialLoaded) {
       void fetchPaginatedCustomers({ page: 1, pageSize: 500 });
     }
   }, [isInitialLoaded, fetchPaginatedCustomers]);
+
+  const discountValue = useMemo(() => {
+    const n = Number.parseFloat(discountValueInput);
+    if (!Number.isFinite(n) || n < 0) return 0;
+    return Math.round(n * 100) / 100;
+  }, [discountValueInput]);
+
+  const minBillAmount = useMemo(() => {
+    const n = Number.parseFloat(minBillInput);
+    if (!Number.isFinite(n) || n < 0) return 0;
+    return Math.round(n * 100) / 100;
+  }, [minBillInput]);
 
   const maxDiscount = useMemo(() => {
     const n = Number.parseFloat(maxDiscountInput);
@@ -137,14 +171,58 @@ export default function OffersPage() {
     return Math.round(n * 100) / 100;
   }, [maxDiscountInput]);
 
+  const scopeItemOptions = useMemo(() => {
+    const services =
+      applicableOn === "SPARE_PARTS"
+        ? []
+        : serviceCatalog
+            .filter((s) => s.isActive !== false)
+            .map((s) => ({ id: s.id, label: s.name, kind: "service" as const }));
+    const parts =
+      applicableOn === "SERVICES"
+        ? []
+        : inventoryParts.map((p) => ({
+            id: p.id,
+            label: p.name,
+            kind: "part" as const,
+          }));
+    const q = itemSearch.trim().toLowerCase();
+    const all = [...services, ...parts];
+    if (!q) return all;
+    return all.filter((x) => x.label.toLowerCase().includes(q));
+  }, [applicableOn, serviceCatalog, inventoryParts, itemSearch]);
+
   const templateMessage = useMemo(
     () =>
       buildOfferBroadcastWhatsAppMessage(
-        { name, code, validTill, maxDiscount, details },
+        {
+          name,
+          code,
+          validFrom,
+          validTill,
+          discountType,
+          discountValue,
+          minBillAmount,
+          maxDiscount,
+          applicableOn,
+          details,
+        },
         OFFER_CUSTOMER_NAME_PLACEHOLDER,
         { businessName }
       ),
-    [name, code, validTill, maxDiscount, details, businessName]
+    [
+      name,
+      code,
+      validFrom,
+      validTill,
+      discountType,
+      discountValue,
+      minBillAmount,
+      maxDiscount,
+      applicableOn,
+      details,
+      businessName,
+    ]
   );
 
   useEffect(() => {
@@ -186,8 +264,27 @@ export default function OffersPage() {
     if (!offer) return;
     setName(offer.name);
     setCode(offer.code);
+    setValidFrom(offer.validFrom?.slice(0, 10) ?? "");
     setValidTill(offer.validTill.slice(0, 10));
+    setDiscountType(offer.discountType === "FLAT" ? "FLAT" : "PERCENTAGE");
+    setDiscountValueInput(
+      typeof offer.discountValue === "number" && offer.discountValue > 0
+        ? String(offer.discountValue)
+        : ""
+    );
+    setMinBillInput(
+      typeof offer.minBillAmount === "number" && offer.minBillAmount > 0
+        ? String(offer.minBillAmount)
+        : ""
+    );
     setMaxDiscountInput(offer.maxDiscount > 0 ? String(offer.maxDiscount) : "");
+    setApplicableOn(
+      offer.applicableOn === "SERVICES" || offer.applicableOn === "SPARE_PARTS"
+        ? offer.applicableOn
+        : "FULL_BILL"
+    );
+    setScope(offer.scope === "SPECIFIC_ITEMS" ? "SPECIFIC_ITEMS" : "ALL_ITEMS");
+    setApplicableItemIds(new Set(offer.applicableItemIds ?? []));
     setDetails(offer.details);
     setSelectedIds(new Set(offer.selectedCustomerIds));
     if (offer.customMessage?.trim()) {
@@ -227,9 +324,11 @@ export default function OffersPage() {
     name.trim().length > 0 &&
     code.trim().length > 0 &&
     validTill.trim().length > 0 &&
+    discountValue > 0 &&
     details.trim().length > 0 &&
     messageText.trim().length > 0 &&
     selectedCount > 0 &&
+    (scope !== "SPECIFIC_ITEMS" || applicableItemIds.size > 0) &&
     !sending;
 
   const sendBroadcast = async () => {
@@ -251,8 +350,16 @@ export default function OffersPage() {
       id: offerId,
       name: name.trim(),
       code: code.trim().toUpperCase(),
+      validFrom: validFrom.trim() || undefined,
       validTill,
+      discountType,
+      discountValue,
+      minBillAmount: minBillAmount > 0 ? minBillAmount : undefined,
       maxDiscount,
+      applicableOn,
+      scope,
+      applicableItemIds:
+        scope === "SPECIFIC_ITEMS" ? Array.from(applicableItemIds) : undefined,
       details: details.trim(),
       customMessage: messageTemplate,
       selectedCustomerIds: recipients.map((c) => c.id),
@@ -414,8 +521,34 @@ export default function OffersPage() {
                 />
               </div>
               <div className="space-y-1.5">
+                <Label htmlFor="offer-min-bill" className="text-xs">
+                  Min. bill amount (₹)
+                </Label>
+                <Input
+                  id="offer-min-bill"
+                  type="number"
+                  min={0}
+                  value={minBillInput}
+                  onChange={(e) => setMinBillInput(e.target.value)}
+                  placeholder="e.g. 1000 (optional)"
+                  className="h-9"
+                />
+              </div>
+              <div className="space-y-1.5">
+                <Label htmlFor="offer-valid-from" className="text-xs">
+                  Start date
+                </Label>
+                <Input
+                  id="offer-valid-from"
+                  type="date"
+                  value={validFrom}
+                  onChange={(e) => setValidFrom(e.target.value)}
+                  className="h-9 date-input-icon-end pr-9 [color-scheme:light] dark:[color-scheme:dark]"
+                />
+              </div>
+              <div className="space-y-1.5">
                 <Label htmlFor="offer-valid" className="text-xs">
-                  Valid till <span className="text-destructive">*</span>
+                  Expiry date <span className="text-destructive">*</span>
                 </Label>
                 <Input
                   id="offer-valid"
@@ -425,20 +558,156 @@ export default function OffersPage() {
                   className="h-9 date-input-icon-end pr-9 [color-scheme:light] dark:[color-scheme:dark]"
                 />
               </div>
-              <div className="space-y-1.5 sm:col-span-2">
-                <Label htmlFor="offer-discount" className="text-xs">
-                  Max. discount amount (₹)
+              <div className="space-y-1.5">
+                <Label className="text-xs">
+                  Discount type <span className="text-destructive">*</span>
+                </Label>
+                <Select
+                  value={discountType}
+                  onValueChange={(v) =>
+                    setDiscountType(v === "FLAT" ? "FLAT" : "PERCENTAGE")
+                  }
+                >
+                  <SelectTrigger className="h-9">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="PERCENTAGE">Percentage (%)</SelectItem>
+                    <SelectItem value="FLAT">Flat amount (₹)</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-1.5">
+                <Label htmlFor="offer-discount-value" className="text-xs">
+                  Value <span className="text-destructive">*</span>
                 </Label>
                 <Input
-                  id="offer-discount"
+                  id="offer-discount-value"
                   type="number"
                   min={0}
-                  value={maxDiscountInput}
-                  onChange={(e) => setMaxDiscountInput(e.target.value)}
-                  placeholder="e.g. 500"
+                  value={discountValueInput}
+                  onChange={(e) => setDiscountValueInput(e.target.value)}
+                  placeholder={discountType === "FLAT" ? "e.g. 500" : "e.g. 10"}
                   className="h-9"
                 />
               </div>
+              {discountType === "PERCENTAGE" ? (
+                <div className="space-y-1.5 sm:col-span-2">
+                  <Label htmlFor="offer-discount" className="text-xs">
+                    Max. discount limit (₹)
+                  </Label>
+                  <Input
+                    id="offer-discount"
+                    type="number"
+                    min={0}
+                    value={maxDiscountInput}
+                    onChange={(e) => setMaxDiscountInput(e.target.value)}
+                    placeholder="e.g. 500 (optional)"
+                    className="h-9"
+                  />
+                </div>
+              ) : null}
+              <div className="space-y-1.5 sm:col-span-2">
+                <Label className="text-xs">Applicable on</Label>
+                <div className="grid grid-cols-3 gap-1.5">
+                  {(
+                    [
+                      ["FULL_BILL", "Full bill"],
+                      ["SERVICES", "Services"],
+                      ["SPARE_PARTS", "Spare parts"],
+                    ] as const
+                  ).map(([value, label]) => (
+                    <button
+                      key={value}
+                      type="button"
+                      onClick={() => {
+                        setApplicableOn(value);
+                        setApplicableItemIds(new Set());
+                      }}
+                      className={cn(
+                        "rounded-lg border px-2 py-2 text-xs font-medium transition-colors",
+                        applicableOn === value
+                          ? "border-primary bg-primary text-primary-foreground"
+                          : "border-border/70 bg-background text-muted-foreground hover:text-foreground"
+                      )}
+                    >
+                      {label}
+                    </button>
+                  ))}
+                </div>
+              </div>
+              <div className="space-y-1.5 sm:col-span-2">
+                <Label className="text-xs">Scope</Label>
+                <Select
+                  value={scope}
+                  onValueChange={(v) =>
+                    setScope(v === "SPECIFIC_ITEMS" ? "SPECIFIC_ITEMS" : "ALL_ITEMS")
+                  }
+                >
+                  <SelectTrigger className="h-9">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="ALL_ITEMS">Apply to all items</SelectItem>
+                    <SelectItem value="SPECIFIC_ITEMS">Apply to specific items</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              {scope === "SPECIFIC_ITEMS" ? (
+                <div className="space-y-2 sm:col-span-2 rounded-xl border border-border/70 bg-muted/30 p-3">
+                  <div className="relative">
+                    <Search className="pointer-events-none absolute left-2.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-muted-foreground" />
+                    <Input
+                      value={itemSearch}
+                      onChange={(e) => setItemSearch(e.target.value)}
+                      placeholder="Search services / parts…"
+                      className="h-9 pl-8"
+                    />
+                  </div>
+                  <div className="max-h-40 space-y-0.5 overflow-y-auto">
+                    {scopeItemOptions.length === 0 ? (
+                      <p className="px-1 py-3 text-center text-xs text-muted-foreground">
+                        No items available for this scope.
+                      </p>
+                    ) : (
+                      scopeItemOptions.map((item) => {
+                        const checked = applicableItemIds.has(item.id);
+                        return (
+                          <label
+                            key={`${item.kind}-${item.id}`}
+                            className={cn(
+                              "flex cursor-pointer items-center gap-2 rounded-lg px-2 py-1.5 text-xs",
+                              checked ? "bg-primary/10" : "hover:bg-muted/70"
+                            )}
+                          >
+                            <Checkbox
+                              checked={checked}
+                              onCheckedChange={(v) => {
+                                setApplicableItemIds((prev) => {
+                                  const next = new Set(prev);
+                                  if (v === true) next.add(item.id);
+                                  else next.delete(item.id);
+                                  return next;
+                                });
+                              }}
+                            />
+                            <span className="min-w-0 flex-1 truncate font-medium">
+                              {item.label}
+                            </span>
+                            <span className="shrink-0 text-[10px] uppercase tracking-wide text-muted-foreground">
+                              {item.kind}
+                            </span>
+                          </label>
+                        );
+                      })
+                    )}
+                  </div>
+                  <p className="text-[11px] text-muted-foreground">
+                    {applicableItemIds.size} item
+                    {applicableItemIds.size === 1 ? "" : "s"} selected
+                  </p>
+                </div>
+              ) : null}
               <div className="space-y-1.5 sm:col-span-2">
                 <Label htmlFor="offer-details" className="text-xs">
                   Offer details / benefit <span className="text-destructive">*</span>
@@ -645,8 +914,8 @@ export default function OffersPage() {
                   : "Select customers to send"}
             </Button>
             <p className="mt-2 text-[11px] leading-snug text-muted-foreground">
-              Uses WhatsApp API when configured; otherwise opens the WhatsApp composer per
-              recipient.
+              Selected customers receive WhatsApp and can redeem this code on booking. Uses the
+              WhatsApp API when configured; otherwise opens the composer per recipient.
             </p>
           </div>
         </section>
@@ -669,6 +938,7 @@ export default function OffersPage() {
                 <tr>
                   <th className="px-4 py-2.5 font-medium sm:px-5">Offer</th>
                   <th className="px-3 py-2.5 font-medium">Code</th>
+                  <th className="px-3 py-2.5 font-medium">Discount</th>
                   <th className="px-3 py-2.5 font-medium">Recipients</th>
                   <th className="px-3 py-2.5 font-medium">Sent</th>
                   <th className="px-4 py-2.5 font-medium sm:px-5">Status</th>
@@ -679,13 +949,17 @@ export default function OffersPage() {
                   <tr key={o.id} className="border-b border-border/40 last:border-0">
                     <td className="px-4 py-3 sm:px-5">
                       <p className="font-medium">{o.name}</p>
-                      {o.maxDiscount > 0 ? (
-                        <p className="text-xs text-muted-foreground">
-                          Max {formatCurrency(o.maxDiscount)}
-                        </p>
-                      ) : null}
+                      <p className="text-xs text-muted-foreground">
+                        {formatOfferApplicableLabel(o)}
+                        {o.minBillAmount && o.minBillAmount > 0
+                          ? ` · Min ${formatCurrency(o.minBillAmount)}`
+                          : ""}
+                      </p>
                     </td>
                     <td className="px-3 py-3 font-mono text-xs">{o.code}</td>
+                    <td className="px-3 py-3 text-xs font-medium text-primary">
+                      {formatOfferDiscountLabel(o)}
+                    </td>
                     <td className="px-3 py-3 tabular-nums">{o.sentCount}</td>
                     <td className="px-3 py-3 text-muted-foreground">
                       {o.sentAt ? formatDate(o.sentAt) : "—"}
