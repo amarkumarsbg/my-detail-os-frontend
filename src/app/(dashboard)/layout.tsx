@@ -18,6 +18,7 @@ import { isHrStaffNavPath, userHasWithoutEditAccess } from "@/lib/staff-access";
 import { useSidebarStore } from "@/store/sidebar-store";
 import { cn } from "@/lib/utils";
 import { SubscriptionRenewBanner } from "@/components/billing/subscription-renew-banner";
+import { MarketingBanners } from "@/components/billing/marketing-banners";
 import { goToMarketingLogin } from "@/lib/marketing-site";
 import {
   completeStaffAuthHandoff,
@@ -213,6 +214,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
           )}
         >
           <Header />
+          <MarketingBanners />
           <SubscriptionRenewBanner />
           <main
             ref={mainScrollRef}

@@ -26,11 +26,18 @@ import {
   ChevronDown,
 } from "lucide-react";
 
+/** On every login/refresh: Workspace + Customers & fleet open; others closed. Toggle is session-only. */
+const DEFAULT_OPEN_SECTIONS = new Set(["Workspace", "Customers & fleet"]);
+
 function navSectionSlug(label: string): string {
   return label
     .toLowerCase()
     .replace(/[^a-z0-9]+/g, "-")
     .replace(/^-|-$/g, "");
+}
+
+function defaultCollapsedSections(): Set<string> {
+  return new Set(NAV_GROUPS.map((g) => g.label).filter((label) => !DEFAULT_OPEN_SECTIONS.has(label)));
 }
 
 /** Sidebar navigation clears dashboard drill-down filters (alerts use `setActiveFilter` before routing). */
@@ -107,6 +114,40 @@ function SidebarContent({
   const navRef = useRef<HTMLElement>(null);
   const navContentRef = useRef<HTMLDivElement>(null);
   const [showScrollHint, setShowScrollHint] = useState(false);
+  const [collapsedSections, setCollapsedSections] = useState<Set<string>>(() =>
+    defaultCollapsedSections()
+  );
+
+  const isSectionOpen = useCallback(
+    (label: string) => !collapsedSections.has(label),
+    [collapsedSections]
+  );
+
+  const toggleSection = useCallback((label: string) => {
+    setCollapsedSections((prev) => {
+      const next = new Set(prev);
+      if (next.has(label)) next.delete(label);
+      else next.add(label);
+      return next;
+    });
+  }, []);
+
+  // When the route changes into a closed section, open that section for this session.
+  const prevAppPathRef = useRef(appPath);
+  useEffect(() => {
+    if (prevAppPathRef.current === appPath) return;
+    prevAppPathRef.current = appPath;
+    const activeGroup = filteredGroups.find((g) =>
+      g.items.some((item) => isNavItemActive(appPath, item.href))
+    );
+    if (!activeGroup) return;
+    setCollapsedSections((prev) => {
+      if (!prev.has(activeGroup.label)) return prev;
+      const next = new Set(prev);
+      next.delete(activeGroup.label);
+      return next;
+    });
+  }, [appPath, filteredGroups]);
 
   const updateScrollHint = useCallback(() => {
     queueMicrotask(() => {
@@ -167,25 +208,40 @@ function SidebarContent({
         )}
       >
         <div ref={navContentRef} className="space-y-3">
-          {filteredGroups.map((group, groupIndex) => (
+          {filteredGroups.map((group, groupIndex) => {
+            const sectionId = `nav-section-${navSectionSlug(group.label)}`;
+            const sectionOpen = isSectionOpen(group.label);
+            return (
             <section
               key={group.label}
               className="space-y-1"
-              aria-labelledby={`nav-section-${navSectionSlug(group.label)}`}
+              aria-labelledby={sectionId}
             >
-              <div
+              <button
+                type="button"
+                id={sectionId}
+                onClick={() => toggleSection(group.label)}
+                aria-expanded={sectionOpen}
                 className={cn(
-                  "flex items-center gap-1 px-3 pb-1.5",
+                  "flex w-full items-center gap-1 rounded-md px-3 pb-1.5 text-left transition-colors",
+                  "hover:bg-[var(--sidebar-accent)]/60",
                   groupIndex === 0 ? "pt-0" : "pt-4"
                 )}
               >
                 <h2
-                  id={`nav-section-${navSectionSlug(group.label)}`}
                   className="min-w-0 flex-1 text-[11px] font-bold uppercase tracking-[0.12em] text-[var(--sidebar-section-heading)]"
                 >
                   {group.label}
                 </h2>
-              </div>
+                <ChevronDown
+                  className={cn(
+                    "h-3.5 w-3.5 shrink-0 text-[var(--sidebar-section-heading)] opacity-80 transition-transform duration-200",
+                    !sectionOpen && "-rotate-90"
+                  )}
+                  aria-hidden
+                />
+              </button>
+              {sectionOpen ? (
               <div className="space-y-0.5 px-1.5">
                 {group.items.map((item) => {
                   const isActive = isNavItemActive(appPath, item.href);
@@ -233,8 +289,10 @@ function SidebarContent({
                   );
                 })}
               </div>
+              ) : null}
             </section>
-          ))}
+            );
+          })}
         </div>
       </nav>
 
