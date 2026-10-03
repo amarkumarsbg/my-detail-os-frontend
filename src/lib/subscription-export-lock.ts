@@ -64,6 +64,7 @@ export function termLabelFromMonths(termMonths: number): string {
   if (Number.isInteger(years) && years >= 1) {
     return years === 1 ? "1 year" : `${years} years`;
   }
+  if (termMonths === 1) return "1 month";
   return `${termMonths} months`;
 }
 

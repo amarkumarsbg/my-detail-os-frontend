@@ -52,6 +52,38 @@ function loadRazorpayScript(): Promise<void> {
   });
 }
 
+function unlockPageForRazorpayOverlay(): () => void {
+  const body = document.body;
+  const html = document.documentElement;
+  const prevBodyPe = body.style.pointerEvents;
+  const prevHtmlPe = html.style.pointerEvents;
+  body.style.pointerEvents = "auto";
+  html.style.pointerEvents = "auto";
+
+  // Radix Dialog sets pointer-events:none on body and traps clicks on its overlay.
+  // Razorpay Checkout is a sibling iframe — Cards/Netbanking won't select without this.
+  const blocked = Array.from(
+    document.querySelectorAll<HTMLElement>(
+      "[data-radix-dialog-overlay], [data-radix-dialog-content], [data-radix-focus-guard]"
+    )
+  );
+  const restoreBlocked = blocked.map((el) => {
+    const pe = el.style.pointerEvents;
+    const vis = el.style.visibility;
+    el.style.pointerEvents = "none";
+    return () => {
+      el.style.pointerEvents = pe;
+      el.style.visibility = vis;
+    };
+  });
+
+  return () => {
+    body.style.pointerEvents = prevBodyPe;
+    html.style.pointerEvents = prevHtmlPe;
+    restoreBlocked.forEach((fn) => fn());
+  };
+}
+
 /**
  * Opens Razorpay Checkout and resolves with payment ids + signature on success.
  * Rejects if the user closes the modal or the script fails.
@@ -73,8 +105,16 @@ export async function openRazorpayCheckout(
     throw new Error("Razorpay key is missing");
   }
 
+  const restorePointerEvents = unlockPageForRazorpayOverlay();
+
   return new Promise((resolve, reject) => {
     let settled = false;
+    const finish = (fn: () => void) => {
+      if (settled) return;
+      settled = true;
+      restorePointerEvents();
+      fn();
+    };
     const rzp = new window.Razorpay!({
       key,
       amount: checkout.amount,
@@ -85,21 +125,15 @@ export async function openRazorpayCheckout(
       prefill: checkout.prefill,
       theme: { color: "#fb8612" },
       handler: (response: RazorpaySuccessResponse) => {
-        if (settled) return;
-        settled = true;
-        resolve(response);
+        finish(() => resolve(response));
       },
       modal: {
         ondismiss: () => {
-          if (settled) return;
-          settled = true;
-          reject(new Error("Payment cancelled"));
+          finish(() => reject(new Error("Payment cancelled")));
         },
       },
     });
     rzp.on("payment.failed", (resp: unknown) => {
-      if (settled) return;
-      settled = true;
       const msg =
         typeof resp === "object" &&
         resp &&
@@ -107,7 +141,7 @@ export async function openRazorpayCheckout(
         typeof (resp as { error?: { description?: string } }).error?.description === "string"
           ? (resp as { error: { description: string } }).error.description
           : "Payment failed";
-      reject(new Error(msg));
+      finish(() => reject(new Error(msg)));
     });
     rzp.open();
   });

@@ -68,7 +68,7 @@ function openSubscriptionBillPrint(bill: SubscriptionBillRow & { organizationNam
   w.document.close();
 }
 
-export function SubscriptionBillsSection() {
+export function SubscriptionBillsSection({ refreshKey = 0 }: { refreshKey?: number }) {
   const [bills, setBills] = useState<SubscriptionBillRow[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -89,7 +89,7 @@ export function SubscriptionBillsSection() {
     return () => {
       cancelled = true;
     };
-  }, []);
+  }, [refreshKey]);
 
   if (loading) {
     return <p className="text-sm text-muted-foreground">Loading subscription bills…</p>;

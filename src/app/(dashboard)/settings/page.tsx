@@ -88,6 +88,7 @@ import {
   GitBranch,
   LockKeyhole,
   Unlock,
+  Copy,
 } from "lucide-react";
 import {
   branchLimitLabel,
@@ -182,6 +183,7 @@ export default function SettingsPage() {
   const entitlement = useOrganizationStore((s) => s.entitlement);
   const refreshEntitlement = useOrganizationStore((s) => s.refreshEntitlement);
   const [renewOpen, setRenewOpen] = useState(false);
+  const [billsRefreshKey, setBillsRefreshKey] = useState(0);
   const highEndStore = useHighEndServiceStore();
   const vehicleCatalog = useVehicleCatalogStore();
   const [newBrandName, setNewBrandName] = useState("");
@@ -886,6 +888,56 @@ export default function SettingsPage() {
                   </CardContent>
                 </Card>
 
+                <Card>
+                  <CardHeader className="pb-3">
+                    <CardTitle className="flex items-center gap-2 text-base">
+                      <Gift className="h-4 w-4" />
+                      Referral code
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent className="space-y-3">
+                    {entitlement.subscription.status === "TRIAL" ? (
+                      <p className="text-sm text-muted-foreground">
+                        Your workshop referral code is created after you convert from trial. Share it with other
+                        workshops so they get a discount on their first paid plan.
+                      </p>
+                    ) : entitlement.organization.shareReferralCode ? (
+                      <>
+                        <p className="text-sm text-muted-foreground">
+                          Share this code with other workshops. They can apply it on first paid conversion for a
+                          platform discount.
+                        </p>
+                        <div className="flex flex-wrap items-center gap-2">
+                          <code className="rounded-lg border bg-muted/50 px-3 py-2 font-mono text-lg font-semibold tracking-wide">
+                            {entitlement.organization.shareReferralCode}
+                          </code>
+                          <Button
+                            type="button"
+                            variant="outline"
+                            size="sm"
+                            onClick={() => {
+                              const code = entitlement.organization.shareReferralCode;
+                              if (!code) return;
+                              void navigator.clipboard.writeText(code).then(
+                                () => toast.success("Referral code copied"),
+                                () => toast.error("Could not copy code")
+                              );
+                            }}
+                          >
+                            <Copy className="mr-1.5 h-3.5 w-3.5" />
+                            Copy
+                          </Button>
+                        </div>
+                      </>
+                    ) : (
+                      <p className="text-sm text-muted-foreground">
+                        Referral code is being prepared. Refresh this page in a moment, or contact support if it
+                        still doesn’t appear.
+                      </p>
+                    )}
+                  </CardContent>
+                </Card>
+
                 {/* Renewal Workbench */}
                 <Card id="renew-workbench">
                   <CardHeader className="pb-3">
@@ -896,6 +948,7 @@ export default function SettingsPage() {
                       entitlement={entitlement}
                       onEntitlementUpdated={async () => {
                         await refreshEntitlement();
+                        setBillsRefreshKey((n) => n + 1);
                       }}
                     />
                   </CardContent>
@@ -910,7 +963,7 @@ export default function SettingsPage() {
                     </CardTitle>
                   </CardHeader>
                   <CardContent>
-                    <SubscriptionBillsSection />
+                    <SubscriptionBillsSection refreshKey={billsRefreshKey} />
                   </CardContent>
                 </Card>
 

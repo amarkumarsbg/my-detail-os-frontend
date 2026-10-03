@@ -234,6 +234,11 @@ async function confirmOrSyncCheckout(
       );
       return synced.entitlement;
     } catch {
+      await apiPost("/api/organization/subscription/sync-razorpay", {
+        paymentId: checkout.paymentId,
+        razorpayOrderId: checkout.orderId,
+        abandonIfUnpaid: true,
+      }).catch(() => undefined);
       throw payErr instanceof Error ? payErr : new Error("Payment was not completed");
     }
   }
@@ -283,12 +288,18 @@ export function SubscriptionRenewDialog({
     const allowed = selectedPlan?.allowedTerms?.length
       ? selectedPlan.allowedTerms
       : [...ALL_TERMS];
-    return ALL_TERMS.filter((t) => allowed.includes(t)).map((months) => ({
-      months,
-      base: pricingConfig.termBasePrices[String(months)] ?? pricingConfig.termBasePrices["12"] ?? 0,
-      label: termLabelFromMonths(months),
-    }));
-  }, [selectedPlan, pricingConfig]);
+    const multiplier = pricingConfig.planMultipliers[planCode] ?? 1;
+    return ALL_TERMS.filter((t) => allowed.includes(t)).map((months) => {
+      const termBase =
+        pricingConfig.termBasePrices[String(months)] ?? pricingConfig.termBasePrices["12"] ?? 0;
+      const price = Math.round(termBase * multiplier * 100) / 100;
+      return {
+        months,
+        base: price,
+        label: termLabelFromMonths(months),
+      };
+    });
+  }, [selectedPlan, pricingConfig, planCode]);
 
   useEffect(() => {
     if (!open) return;
@@ -396,6 +407,8 @@ export function SubscriptionRenewDialog({
       });
 
       if (data.checkout?.provider === "RAZORPAY") {
+        onOpenChange(false);
+        await new Promise((r) => window.setTimeout(r, 50));
         try {
           const entitlementNext = await confirmOrSyncCheckout(data.checkout);
           setEntitlement(entitlementNext);

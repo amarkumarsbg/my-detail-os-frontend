@@ -240,12 +240,18 @@ export function SubscriptionRenewalWorkbench({
     const allowed = selectedPlan?.allowedTerms?.length
       ? selectedPlan.allowedTerms
       : [...ALL_TERMS];
-    return ALL_TERMS.filter((t) => allowed.includes(t)).map((months) => ({
-      months,
-      base: pricingConfig.termBasePrices[String(months)] ?? pricingConfig.termBasePrices["12"] ?? 0,
-      label: termLabelFromMonths(months),
-    }));
-  }, [selectedPlan, pricingConfig]);
+    const multiplier = pricingConfig.planMultipliers[planCode] ?? 1;
+    return ALL_TERMS.filter((t) => allowed.includes(t)).map((months) => {
+      const termBase =
+        pricingConfig.termBasePrices[String(months)] ?? pricingConfig.termBasePrices["12"] ?? 0;
+      const price = Math.round(termBase * multiplier * 100) / 100;
+      return {
+        months,
+        base: price,
+        label: termLabelFromMonths(months),
+      };
+    });
+  }, [selectedPlan, pricingConfig, planCode]);
 
   const loadHistory = async () => {
     setHistoryLoading(true);
@@ -428,6 +434,11 @@ export function SubscriptionRenewalWorkbench({
             await loadHistory();
             return;
           } catch {
+            await apiPost("/api/organization/subscription/sync-razorpay", {
+              paymentId: data.checkout.paymentId,
+              razorpayOrderId: data.checkout.orderId,
+              abandonIfUnpaid: true,
+            }).catch(() => undefined);
             toast.error(payErr instanceof Error ? payErr.message : "Payment was not completed");
             return;
           }
@@ -498,6 +509,11 @@ export function SubscriptionRenewalWorkbench({
             await loadHistory();
             return;
           } catch {
+            await apiPost("/api/organization/subscription/sync-razorpay", {
+              paymentId: data.checkout.paymentId,
+              razorpayOrderId: data.checkout.orderId,
+              abandonIfUnpaid: true,
+            }).catch(() => undefined);
             toast.error(payErr instanceof Error ? payErr.message : "Payment was not completed");
             setEntitlement(data.entitlement);
             await loadHistory();

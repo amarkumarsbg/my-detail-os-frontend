@@ -13,7 +13,12 @@ export type PlanLimits = {
 };
 
 export type OrganizationEntitlement = {
-  organization: { id: string; name: string; slug: string | null };
+  organization: {
+    id: string;
+    name: string;
+    slug: string | null;
+    shareReferralCode?: string | null;
+  };
   subscription: {
     planCode: PlanCode;
     planName: string;
