@@ -242,50 +242,70 @@ function SidebarContent({
                 />
               </button>
               {sectionOpen ? (
-              <div className="space-y-0.5 px-1.5">
-                {group.items.map((item) => {
+              <div className="ml-2 space-y-0.5">
+                {group.items.map((item, itemIndex) => {
                   const isActive = isNavItemActive(appPath, item.href);
+                  const isLast = itemIndex === group.items.length - 1;
                   return (
-                    <Link
-                      key={item.href}
-                      href={tenantHref(item.href)}
-                      onClick={() => {
-                        if (SIDEBAR_CLEAR_FILTER_HREFS.has(item.href)) clearDashboardFilter(null);
-                        onNavClick?.();
-                      }}
-                      className={cn(
-                        "group flex cursor-pointer items-center gap-2.5 rounded-xl px-3 py-2.5 text-[13px] font-medium origin-left",
-                        "translate-x-0 scale-100 transform-gpu transition-[color,background-color,transform,box-shadow] duration-200 ease-out",
-                        isActive
-                          ? "bg-[var(--sidebar-active)] text-[var(--sidebar-active-foreground)] shadow-sm"
-                          : "text-[var(--sidebar-foreground)] hover:bg-[var(--sidebar-accent)] hover:text-[var(--sidebar-accent-foreground)] hover:shadow-sm motion-safe:hover:scale-[1.03] motion-safe:hover:translate-x-0.5"
-                      )}
-                    >
-                      <item.icon
-                        className={cn(
-                          "h-4 w-4 shrink-0 transition-transform duration-200 ease-out",
-                          isActive ? "opacity-100" : "opacity-90 motion-safe:group-hover:scale-125"
-                        )}
-                      />
-                      <span className="flex-1 min-w-0">{item.label}</span>
-                      {item.href === "/appointments" && tomorrowScheduledCount > 0 && (
-                        <span className="ml-auto inline-flex items-center justify-center rounded-full bg-violet-500 px-1.5 py-0.5 text-[10px] font-bold leading-none text-white tabular-nums">
-                          {tomorrowScheduledCount}
-                        </span>
-                      )}
-                      {item.href === "/bookings" && bookingTodayTomorrowCount > 0 && (
+                    <div key={item.href} className="relative pl-4">
+                      {/* Tree branch: vertical rail + elbow into the row */}
+                      {isLast ? (
                         <span
-                          className={cn(
-                            "ml-auto inline-flex items-center justify-center rounded-full px-1.5 py-0.5 text-[10px] font-bold leading-none tabular-nums",
-                            isActive
-                              ? "bg-white/90 text-[var(--sidebar-active)]"
-                              : "bg-[var(--sidebar-active)] text-[var(--sidebar-active-foreground)]"
-                          )}
-                        >
-                          {bookingTodayTomorrowCount}
-                        </span>
+                          aria-hidden
+                          className="pointer-events-none absolute left-0 top-0 h-1/2 w-3 rounded-bl-[7px] border-b border-l border-[var(--sidebar-border)]/75"
+                        />
+                      ) : (
+                        <>
+                          <span
+                            aria-hidden
+                            className="pointer-events-none absolute bottom-0 left-0 top-0 w-px bg-[var(--sidebar-border)]/75"
+                          />
+                          <span
+                            aria-hidden
+                            className="pointer-events-none absolute left-0 top-1/2 w-3 -translate-y-px border-t border-[var(--sidebar-border)]/75"
+                          />
+                        </>
                       )}
-                    </Link>
+                      <Link
+                        href={tenantHref(item.href)}
+                        onClick={() => {
+                          if (SIDEBAR_CLEAR_FILTER_HREFS.has(item.href)) clearDashboardFilter(null);
+                          onNavClick?.();
+                        }}
+                        className={cn(
+                          "group flex cursor-pointer items-center gap-2.5 rounded-xl px-2.5 py-2.5 text-[13px] font-medium origin-left",
+                          "translate-x-0 scale-100 transform-gpu transition-[color,background-color,transform,box-shadow] duration-200 ease-out",
+                          isActive
+                            ? "bg-[var(--sidebar-active)] text-[var(--sidebar-active-foreground)] shadow-sm"
+                            : "text-[var(--sidebar-foreground)] hover:bg-[var(--sidebar-accent)] hover:text-[var(--sidebar-accent-foreground)] hover:shadow-sm motion-safe:hover:scale-[1.03] motion-safe:hover:translate-x-0.5"
+                        )}
+                      >
+                        <item.icon
+                          className={cn(
+                            "h-4 w-4 shrink-0 transition-transform duration-200 ease-out",
+                            isActive ? "opacity-100" : "opacity-90 motion-safe:group-hover:scale-125"
+                          )}
+                        />
+                        <span className="flex-1 min-w-0">{item.label}</span>
+                        {item.href === "/appointments" && tomorrowScheduledCount > 0 && (
+                          <span className="ml-auto inline-flex items-center justify-center rounded-full bg-violet-500 px-1.5 py-0.5 text-[10px] font-bold leading-none text-white tabular-nums">
+                            {tomorrowScheduledCount}
+                          </span>
+                        )}
+                        {item.href === "/bookings" && bookingTodayTomorrowCount > 0 && (
+                          <span
+                            className={cn(
+                              "ml-auto inline-flex items-center justify-center rounded-full px-1.5 py-0.5 text-[10px] font-bold leading-none tabular-nums",
+                              isActive
+                                ? "bg-white/90 text-[var(--sidebar-active)]"
+                                : "bg-[var(--sidebar-active)] text-[var(--sidebar-active-foreground)]"
+                            )}
+                          >
+                            {bookingTodayTomorrowCount}
+                          </span>
+                        )}
+                      </Link>
+                    </div>
                   );
                 })}
               </div>
