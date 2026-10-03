@@ -209,6 +209,61 @@ export function buildFollowUpWhatsAppMessage(
   ].join("\n");
 }
 
+/** Insert in offer message templates; replaced with each recipient's first name on send. */
+export const OFFER_CUSTOMER_NAME_PLACEHOLDER = "{{name}}";
+
+export function personalizeOfferWhatsAppMessage(
+  template: string,
+  customerName: string
+): string {
+  const first = customerName.trim().split(/\s+/)[0] || "there";
+  return template.split(OFFER_CUSTOMER_NAME_PLACEHOLDER).join(first);
+}
+
+export function buildOfferBroadcastWhatsAppMessage(
+  offer: {
+    name: string;
+    code: string;
+    validTill: string;
+    maxDiscount: number;
+    details: string;
+  },
+  customerName: string,
+  opts: { businessName?: string } = {}
+): string {
+  const brand = opts.businessName?.trim() || "MY DETAIL OS";
+  const trimmedName = customerName.trim();
+  const first =
+    trimmedName === OFFER_CUSTOMER_NAME_PLACEHOLDER
+      ? OFFER_CUSTOMER_NAME_PLACEHOLDER
+      : trimmedName.split(/\s+/)[0] || "there";
+  let validLabel = offer.validTill.trim();
+  try {
+    if (validLabel) validLabel = format(parseISO(validLabel), "dd MMM yyyy");
+  } catch {
+    /* keep raw */
+  }
+  const discount =
+    offer.maxDiscount > 0 ? formatCurrency(offer.maxDiscount) : null;
+  return [
+    `Hi *${first}*!`,
+    ``,
+    `*${offer.name.trim() || "Special offer"}* from *${brand}*`,
+    offer.details.trim() ? `` : null,
+    offer.details.trim() || null,
+    ``,
+    offer.code.trim() ? `Coupon code: *${offer.code.trim()}*` : null,
+    discount ? `Max. discount: *${discount}*` : null,
+    validLabel ? `Valid till: *${validLabel}*` : null,
+    ``,
+    `Book your service and mention this code at the counter.`,
+    ``,
+    `— Team ${brand}`,
+  ]
+    .filter((line) => line != null)
+    .join("\n");
+}
+
 export function buildPickupDropWhatsAppMessage(
   req: PickupDropRequest,
   opts: { branchName?: string; businessName?: string } = {}

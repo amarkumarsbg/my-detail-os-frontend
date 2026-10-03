@@ -27,6 +27,9 @@ export type DomainResource =
   | "stockTransfers"
   | "partCategories"
   | "followUps"
+  | "offers"
+  | "supportTickets"
+  | "demoRequests"
   | "serviceCategories"
   | "notifications"
   | "pickupDropRequests"
@@ -145,6 +148,8 @@ const ROUTE_PACKS: { prefix: string; resources: DomainResource[] }[] = [
   { prefix: "/referrals", resources: ["referralProgram", "walletTransactions", "customers"] },
   { prefix: "/reminders", resources: ["serviceReminders", "notifications", "appSettings"] },
   { prefix: "/follow-ups", resources: ["followUps", "jobCards", "notifications"] },
+  { prefix: "/offers", resources: ["offers", "customers", "notifications"] },
+  { prefix: "/support", resources: ["supportTickets", "demoRequests", "notifications"] },
   {
     prefix: "/inventory",
     resources: [

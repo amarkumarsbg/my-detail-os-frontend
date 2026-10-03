@@ -12,7 +12,7 @@ import { MobileBottomNav } from "@/components/layout/mobile-bottom-nav";
 import { AppDataSync } from "@/components/layout/app-data-sync";
 import { DomainDataSync } from "@/components/layout/domain-data-sync";
 import { Button } from "@/components/ui/button";
-import { NAV_GROUPS } from "@/lib/nav-items";
+import { navItemForPath } from "@/lib/nav-items";
 import { canAccessNavItem } from "@/lib/rbac";
 import { isHrStaffNavPath, userHasWithoutEditAccess } from "@/lib/staff-access";
 import { useSidebarStore } from "@/store/sidebar-store";
@@ -48,16 +48,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   });
   const bootstrapReady = useAppBootstrapStore((s) => s.ready);
 
-  const currentNavItem = useMemo(() => {
-    for (const group of NAV_GROUPS) {
-      for (const item of group.items) {
-        if (appPath === item.href || appPath.startsWith(item.href + "/")) {
-          return item;
-        }
-      }
-    }
-    return null;
-  }, [appPath]);
+  const currentNavItem = useMemo(() => navItemForPath(appPath), [appPath]);
 
   useEffect(() => {
     if (useAuthStore.persist.hasHydrated()) {
@@ -125,7 +116,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
 
   useEffect(() => {
     if (!authReady || !sessionChecked || !isAuthenticated || !user) return;
-    if (user.role === "SUPER_ADMIN") return;
+    if (user.role === "SUPER_ADMIN" || user.role === "ADMIN") return;
     if (userHasWithoutEditAccess(user) && isHrStaffNavPath(appPath)) {
       toast.error("Access Denied", {
         description: "HR & Staff is not available without edit access.",

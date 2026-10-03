@@ -37,6 +37,7 @@ import {
   Wrench,
   Building2,
   PanelLeft,
+  Settings,
 } from "lucide-react";
 import { useState, useEffect, useRef, useMemo } from "react";
 import Link from "next/link";
@@ -295,8 +296,16 @@ export function Header() {
                 </div>
               </button>
             </DropdownMenuTrigger>
-            <DropdownMenuContent align="end" className="w-52">
-              <DropdownMenuLabel>My Account</DropdownMenuLabel>
+            <DropdownMenuContent align="end" className="w-56">
+              <DropdownMenuLabel>
+                <div className="space-y-0.5">
+                  <p className="text-sm font-medium leading-none">{user.name}</p>
+                  <p className="text-xs font-normal text-muted-foreground truncate">
+                    {user.email}
+                  </p>
+                  <p className="text-xs font-normal text-muted-foreground">{user.role}</p>
+                </div>
+              </DropdownMenuLabel>
               <DropdownMenuSeparator />
               <DropdownMenuItem asChild>
                 <Link href={tenantHref("/profile")}>
@@ -304,10 +313,16 @@ export function Header() {
                   Profile
                 </Link>
               </DropdownMenuItem>
+              <DropdownMenuItem asChild>
+                <Link href={tenantHref("/settings")}>
+                  <Settings className="w-4 h-4 mr-2" />
+                  Settings
+                </Link>
+              </DropdownMenuItem>
               <DropdownMenuSeparator />
               <DropdownMenuItem onClick={handleLogout} className="text-destructive focus:text-destructive">
                 <LogOut className="w-4 h-4 mr-2" />
-                Sign out
+                Logout
               </DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>

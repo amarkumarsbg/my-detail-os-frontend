@@ -17,6 +17,9 @@ import type {
   Expense,
   ExpenseVendorProfile,
   FollowUp,
+  OfferBroadcast,
+  SupportTicket,
+  DemoRequest,
   Invoice,
   JobCard,
   MembershipPackage,
@@ -56,6 +59,9 @@ import { useCustomerStore } from "@/store/customer-store";
 import { useDashboardStatsStore } from "@/store/dashboard-stats-store";
 import { useExpenseStore } from "@/store/expense-store";
 import { useFollowUpStore } from "@/store/follow-up-store";
+import { useOfferStore } from "@/store/offer-store";
+import { useSupportTicketStore } from "@/store/support-ticket-store";
+import { useDemoRequestStore } from "@/store/demo-request-store";
 import {
   mergeHighEndServicesPayload,
   useHighEndServiceStore,
@@ -319,6 +325,24 @@ async function loadOne(resource: DomainResource): Promise<void> {
     case "followUps": {
       useFollowUpStore.setState({
         followUps: await getCollectionItems<FollowUp>("followUps"),
+      });
+      return;
+    }
+    case "offers": {
+      useOfferStore.setState({
+        offers: await getCollectionItems<OfferBroadcast>("offers"),
+      });
+      return;
+    }
+    case "supportTickets": {
+      useSupportTicketStore.setState({
+        tickets: await getCollectionItems<SupportTicket>("supportTickets"),
+      });
+      return;
+    }
+    case "demoRequests": {
+      useDemoRequestStore.setState({
+        demoRequests: await getCollectionItems<DemoRequest>("demoRequests"),
       });
       return;
     }

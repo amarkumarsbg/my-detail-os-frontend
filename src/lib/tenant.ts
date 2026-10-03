@@ -67,6 +67,8 @@ export const RESERVED_SLUGS: ReadonlySet<string> = new Set(
     "reminders",
     "follow-ups",
     "referrals",
+    "offers",
+    "support",
     "accounting",
     "expenses",
     "vendors",

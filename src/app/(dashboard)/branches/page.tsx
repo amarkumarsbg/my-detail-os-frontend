@@ -23,6 +23,7 @@ import { usePickupDropStore } from "@/store/pickup-drop-store";
 import { usePayrollStore } from "@/store/payroll-store";
 import { useAttendanceStore } from "@/store/attendance-store";
 import { useAuthStore } from "@/store/auth-store";
+import { useTenantPath } from "@/components/tenant/tenant-context";
 import { canManageOrgBranches } from "@/lib/rbac";
 import {
   canDeleteBranch,
@@ -58,6 +59,7 @@ import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
 
 export default function BranchesPage() {
+  const tenantHref = useTenantPath();
   const userRole = useAuthStore((s) => s.user?.role);
   const canEdit = canManageOrgBranches(userRole);
   const branches = useBranchStore((s) => s.branches);
@@ -348,13 +350,13 @@ export default function BranchesPage() {
   return (
     <div className="space-y-6">
       <PageHeader
-        title="Workshop locations"
-        description="Directory of sites, contacts, and operating status"
+        title="Branch"
+        description="Manage workshop branches, contacts, and operating status"
         actions={
           canEdit ? (
             <Button type="button" size="sm" onClick={openAddLocation}>
               <Plus className="h-4 w-4" />
-              Add site
+              Add branch
             </Button>
           ) : undefined
         }
@@ -373,6 +375,13 @@ export default function BranchesPage() {
             {entitlement?.subscription.planName ?? "Plan"} ·{" "}
             {entitlement?.usage.branchesUsed ?? branches.length} /{" "}
             {branchLimitLabel(entitlement?.subscription.effectiveMaxBranches)} branches.{" "}
+            <Link
+              href={`${tenantHref("/settings")}?tab=plan`}
+              className="font-medium text-primary underline-offset-4 hover:underline"
+            >
+              Buy extra branch / upgrade
+            </Link>
+            {" · "}
             <PlanCtaTextButton
               href={resolveContactUsUrl(entitlement)}
               phone={resolveSupportPhone(entitlement)}
@@ -397,7 +406,7 @@ export default function BranchesPage() {
 
       <div className="flex items-center gap-2">
         <span className="h-7 w-1 shrink-0 rounded-full bg-primary" aria-hidden />
-        <h2 className="text-base font-semibold tracking-tight">Location directory</h2>
+        <h2 className="text-base font-semibold tracking-tight">Branch directory</h2>
       </div>
 
       <Card className="border-border/80 p-0 shadow-sm overflow-hidden">

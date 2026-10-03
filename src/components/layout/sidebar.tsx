@@ -24,7 +24,9 @@ import {
   X,
   LogOut,
   ChevronDown,
+  Sparkles,
 } from "lucide-react";
+import { RequestDemoDialog } from "@/components/billing/request-demo-dialog";
 
 /** On every login/refresh: Workspace + Customers & fleet open; others closed. Toggle is session-only. */
 const DEFAULT_OPEN_SECTIONS = new Set(["Workspace", "Customers & fleet"]);
@@ -342,6 +344,31 @@ export function Sidebar() {
   const user = useAuthStore((s) => s.user);
   const logout = useAuthStore((s) => s.logout);
   const companyLogoSrc = resolveUploadsPublicUrl(businessLogo);
+  const [demoOpen, setDemoOpen] = useState(false);
+  const canRequestDemo = canAccessNavItem(
+    undefined,
+    user?.role,
+    "SUPPORT",
+    user?.permissions
+  );
+
+  const demoCta = canRequestDemo ? (
+    <button
+      type="button"
+      onClick={() => {
+        setDemoOpen(true);
+        setMobileOpen(false);
+      }}
+      className={cn(
+        "flex w-full items-center gap-2.5 rounded-xl border border-primary/25",
+        "bg-primary/10 px-3 py-2.5 text-left text-[13px] font-semibold text-primary",
+        "transition-colors hover:bg-primary/15 hover:border-primary/40"
+      )}
+    >
+      <Sparkles className="h-4 w-4 shrink-0" />
+      <span className="min-w-0 truncate">Request a Demo</span>
+    </button>
+  ) : null;
 
   const handleMobileLogout = () => {
     logout();
@@ -408,6 +435,11 @@ export function Sidebar() {
             navOverflow="auto"
           />
         </div>
+        {demoCta ? (
+          <div className="shrink-0 border-t border-[var(--sidebar-border)] px-2.5 py-3">
+            {demoCta}
+          </div>
+        ) : null}
       </aside>
 
       {mobileOpen && (
@@ -442,6 +474,12 @@ export function Sidebar() {
           />
         </div>
 
+        {demoCta ? (
+          <div className="shrink-0 border-t border-[var(--sidebar-border)] px-2.5 pt-3">
+            {demoCta}
+          </div>
+        ) : null}
+
         {user && (
           <div className="shrink-0 border-t border-[var(--sidebar-border)] px-2.5 py-3 space-y-1">
             <button
@@ -455,7 +493,7 @@ export function Sidebar() {
               <span className="truncate min-w-0">Log out</span>
             </button>
             <Link
-              href="/profile"
+              href={tenantHref("/profile")}
               onClick={() => setMobileOpen(false)}
               className="flex w-full items-center gap-3 rounded-lg px-2.5 py-2 text-[13px] font-medium text-[var(--sidebar-foreground)] hover:bg-[var(--sidebar-accent)] hover:text-[var(--sidebar-accent-foreground)] transition-colors"
             >
@@ -469,6 +507,8 @@ export function Sidebar() {
           </div>
         )}
       </aside>
+
+      <RequestDemoDialog open={demoOpen} onOpenChange={setDemoOpen} />
     </>
   );
 }

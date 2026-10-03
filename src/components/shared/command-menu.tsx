@@ -7,6 +7,7 @@ import { useAuthStore } from "@/store/auth-store";
 import type { UserRole } from "@/types";
 import { canAccessNavItem } from "@/lib/rbac";
 import { isHrStaffNavHref, userHasWithoutEditAccess } from "@/lib/staff-access";
+import { useTenantPath } from "@/components/tenant/tenant-context";
 import { useCustomerStore } from "@/store/customer-store";
 import { useInvoiceStore } from "@/store/invoice-store";
 import { useVehicleStore } from "@/store/vehicle-store";
@@ -99,7 +100,7 @@ const NAV_PAGES: NavPageItem[] = [
   { name: "Activity Log", href: "/activity", icon: History, permissionKey: "ACTIVITY" },
   { name: "Referrals", href: "/referrals", icon: Gift, roles: ["ADMIN", "MANAGER"], permissionKey: "REFERRALS" },
   {
-    name: "Locations",
+    name: "Branch",
     href: "/branches",
     icon: Building2,
     roles: ["SUPER_ADMIN", "ADMIN", "MANAGER", "BRANCH_MANAGER"],
@@ -109,6 +110,7 @@ const NAV_PAGES: NavPageItem[] = [
 
 export function CommandMenu({ open, onOpenChange }: CommandMenuProps) {
   const router = useRouter();
+  const tenantHref = useTenantPath();
   const user = useAuthStore((s) => s.user);
   const userRole = user?.role;
   const userPermissions = user?.permissions;
@@ -137,7 +139,7 @@ export function CommandMenu({ open, onOpenChange }: CommandMenuProps) {
 
   const navigate = (href: string) => {
     onOpenChange(false);
-    router.push(href);
+    router.push(tenantHref(href));
   };
 
   if (!open) return null;

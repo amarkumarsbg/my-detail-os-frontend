@@ -45,3 +45,75 @@ export interface FollowUp {
   createdAt: string;
   updatedAt: string;
 }
+
+/** Workshop promotional offer / WhatsApp broadcast (JSON collection `offers`). */
+export interface OfferBroadcast {
+  id: string;
+  name: string;
+  code: string;
+  validTill: string;
+  maxDiscount: number;
+  details: string;
+  /** Editable WhatsApp body; may include `{{name}}` for per-recipient first name. */
+  customMessage?: string;
+  selectedCustomerIds: string[];
+  status: "DRAFT" | "SENT";
+  sentAt?: string;
+  sentCount: number;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export type SupportTicketCategory = "BUG" | "FEATURE";
+export type SupportTicketPriority = "LOW" | "MEDIUM" | "HIGH";
+export type SupportTicketStatus = "OPEN" | "IN_PROGRESS" | "RESOLVED" | "CLOSED";
+
+export interface SupportTicketAttachment {
+  id: string;
+  name: string;
+  mimeType: string;
+  size: number;
+  /** data URL for images/audio/docs (kept small client-side). */
+  dataUrl: string;
+  kind: "file" | "voice";
+}
+
+export interface SupportTicketMessage {
+  id: string;
+  author: "WORKSHOP" | "SUPPORT";
+  authorName: string;
+  body: string;
+  createdAt: string;
+  attachmentIds?: string[];
+}
+
+/** Workshop → platform help tickets (JSON collection `supportTickets`). */
+export interface SupportTicket {
+  id: string;
+  subject: string;
+  category: SupportTicketCategory;
+  priority: SupportTicketPriority;
+  description: string;
+  status: SupportTicketStatus;
+  createdByUserId?: string;
+  createdByName: string;
+  attachments: SupportTicketAttachment[];
+  messages: SupportTicketMessage[];
+  createdAt: string;
+  updatedAt: string;
+}
+
+/** Live product demo booking (JSON collection `demoRequests`). */
+export interface DemoRequest {
+  id: string;
+  fullName: string;
+  mobile: string;
+  workshopName: string;
+  city: string;
+  interests: string;
+  slotDate: string;
+  slotLabel: string;
+  status: "SCHEDULED" | "CANCELLED" | "COMPLETED";
+  createdByUserId?: string;
+  createdAt: string;
+}

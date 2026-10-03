@@ -27,6 +27,8 @@ import {
   TrendingUp,
   FileBarChart,
   Gift,
+  Megaphone,
+  LifeBuoy,
   Building2,
   Landmark,
   Crown,
@@ -67,6 +69,7 @@ export const NAV_GROUPS: { label: string; items: NavItemDef[] }[] = [
       { label: "Reminders", href: "/reminders", icon: Bell, roles: ["ADMIN", "MANAGER", "RECEPTIONIST"], permissionKey: "REMINDERS" },
       { label: "Follow-ups", href: "/follow-ups", icon: PhoneCall, roles: ["ADMIN", "MANAGER", "RECEPTIONIST"], permissionKey: "FOLLOW_UPS" },
       { label: "Referrals", href: "/referrals", icon: Gift, roles: ["ADMIN", "MANAGER"], permissionKey: "REFERRALS" },
+      { label: "Offers", href: "/offers", icon: Megaphone, roles: ["ADMIN", "MANAGER", "RECEPTIONIST"], permissionKey: "OFFERS" },
     ],
   },
   {
@@ -164,7 +167,7 @@ export const NAV_GROUPS: { label: string; items: NavItemDef[] }[] = [
     label: "Workshop Analytics & Tools",
     items: [
       {
-        label: "Locations",
+        label: "Branch",
         href: "/branches",
         icon: Building2,
         roles: ["SUPER_ADMIN", "ADMIN", "MANAGER", "BRANCH_MANAGER"],
@@ -181,6 +184,7 @@ export const NAV_GROUPS: { label: string; items: NavItemDef[] }[] = [
       },
       { label: "Activity Log", href: "/activity", icon: History, roles: ["ADMIN"], permissionKey: "ACTIVITY" },
       { label: "Messages Log", href: "/messages", icon: MessageSquare, roles: ["ADMIN"], permissionKey: "MESSAGES" },
+      { label: "Support", href: "/support", icon: LifeBuoy, roles: ["ADMIN", "MANAGER", "RECEPTIONIST", "SUPERVISOR", "BRANCH_MANAGER"], permissionKey: "SUPPORT" },
       { label: "Settings", href: "/settings", icon: Settings, roles: ["ADMIN"], permissionKey: "SETTINGS" },
     ],
   },
@@ -204,6 +208,8 @@ const NAV_DESCRIPTIONS: Record<string, string> = {
   "/reminders": "Track service due dates and send follow-up reminders",
   "/follow-ups": "Work inactive customers and complete follow-up tasks",
   "/referrals": "Track referral codes, rewards, and new customer sign-ups",
+  "/offers": "Compose promotional offers and broadcast them on WhatsApp",
+  "/support": "Report issues and chat with the MY DETAIL OS support team",
   "/accounting": "Review finances, expenses, revenue, and workshop analytics",
   "/expenses": "Track and manage operational expenses by category and vendor",
   "/vendors": "Manage supplier relationships and outstanding payables",
@@ -220,7 +226,7 @@ const NAV_DESCRIPTIONS: Record<string, string> = {
   "/payroll": "Manage staff salaries, bonuses, and disbursements",
   "/services": "Manage service packages, add-ons, and categories",
   "/inventory": "Manage parts catalog, branch stock, transfers, purchases, and history",
-  "/branches": "Manage workshop locations, contacts, and operating status",
+  "/branches": "Manage workshop branches, contacts, and operating status",
   "/performance": "Review branch and staff performance across jobs and revenue",
   "/mechanics": "Track mechanic jobs, utilization, and performance stats",
   "/advanced-reports": "Run deep-dive reports across jobs, billing, and operations",
@@ -242,6 +248,20 @@ function navMatchForPath(pathname: string): { href: string; label: string } | un
   return candidates
     .filter((item) => path === item.href || path.startsWith(`${item.href}/`))
     .sort((a, b) => b.href.length - a.href.length)[0];
+}
+
+/** Full nav item for the active route (longest href match). Used by layout RBAC. */
+export function navItemForPath(pathname: string): NavItemDef | null {
+  const path = stripOrgSlugFromPath(pathname.split(/[?#]/)[0] ?? pathname);
+  let best: NavItemDef | null = null;
+  for (const group of NAV_GROUPS) {
+    for (const item of group.items) {
+      if (path === item.href || path.startsWith(`${item.href}/`)) {
+        if (!best || item.href.length > best.href.length) best = item;
+      }
+    }
+  }
+  return best;
 }
 
 /** Active sidebar/menu title for the current dashboard route (longest href match). */

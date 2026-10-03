@@ -19,7 +19,7 @@ export function userHasPermission(
   return Boolean(user.permissions?.includes(permissionKey));
 }
 
-/** Can create / edit / deactivate branches on the Locations page. */
+/** Can create / edit / deactivate branches on the Branch page. */
 export function canManageOrgBranches(role: UserRole | undefined): boolean {
   return role === "SUPER_ADMIN" || role === "ADMIN";
 }

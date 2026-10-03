@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useState, useRef } from "react";
 import Link from "next/link";
+import { useSearchParams } from "next/navigation";
 import { toast } from "sonner";
 import { PageHeader } from "@/components/shared/page-header";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -179,10 +180,31 @@ function ToggleSwitch({ enabled, onToggle }: { enabled: boolean; onToggle: () =>
   );
 }
 
+const SETTINGS_TABS = new Set([
+  "business",
+  "branding",
+  "tax",
+  "rewards",
+  "terms",
+  "incentives",
+  "vehicles",
+  "high-end",
+  "reminders",
+  "notifications",
+  "plan",
+  "general",
+]);
+
 export default function SettingsPage() {
+  const searchParams = useSearchParams();
   const settings = useSettingsStore();
   const entitlement = useOrganizationStore((s) => s.entitlement);
   const refreshEntitlement = useOrganizationStore((s) => s.refreshEntitlement);
+  const initialTab = (() => {
+    const raw = searchParams.get("tab")?.trim().toLowerCase() ?? "";
+    return SETTINGS_TABS.has(raw) ? raw : "business";
+  })();
+  const [settingsTab, setSettingsTab] = useState(initialTab);
   const [renewOpen, setRenewOpen] = useState(false);
   const [billsRefreshKey, setBillsRefreshKey] = useState(0);
   const highEndStore = useHighEndServiceStore();
@@ -651,11 +673,16 @@ export default function SettingsPage() {
     void refreshEntitlement();
   }, [refreshEntitlement]);
 
+  useEffect(() => {
+    const raw = searchParams.get("tab")?.trim().toLowerCase() ?? "";
+    if (SETTINGS_TABS.has(raw)) setSettingsTab(raw);
+  }, [searchParams]);
+
   return (
     <div className="space-y-4 sm:space-y-6">
       <PageHeader title="Settings" />
 
-      <Tabs defaultValue="business" className="space-y-6">
+      <Tabs value={settingsTab} onValueChange={setSettingsTab} className="space-y-6">
         <TabsList className="flex flex-wrap h-auto gap-1 bg-muted/50 border border-border/60 rounded-xl p-1.5">
           <TabsTrigger value="business" className="rounded-lg text-xs font-medium px-3 py-1.5 data-[state=active]:bg-background data-[state=active]:shadow-sm data-[state=active]:text-foreground data-[state=active]:font-semibold">Business</TabsTrigger>
           <TabsTrigger value="branding" className="rounded-lg text-xs font-medium px-3 py-1.5 data-[state=active]:bg-background data-[state=active]:shadow-sm data-[state=active]:text-foreground data-[state=active]:font-semibold">Branding & Theme</TabsTrigger>
