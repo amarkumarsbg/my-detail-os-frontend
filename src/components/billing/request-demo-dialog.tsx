@@ -138,7 +138,10 @@ export function RequestDemoDialog({
       slotLabel: selectedSlot,
       status: "SCHEDULED",
       createdByUserId: user?.id,
+      organizationId: user?.organizationId,
+      organizationName: businessName?.trim() || workshopName.trim() || undefined,
       createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
     };
     try {
       await addDemoRequest(item);

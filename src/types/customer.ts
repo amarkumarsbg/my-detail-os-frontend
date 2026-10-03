@@ -123,5 +123,10 @@ export interface DemoRequest {
   slotLabel: string;
   status: "SCHEDULED" | "CANCELLED" | "COMPLETED";
   createdByUserId?: string;
+  /** Denormalized for platform admin inbox. */
+  organizationId?: string;
+  organizationName?: string;
+  notes?: string;
   createdAt: string;
+  updatedAt?: string;
 }
