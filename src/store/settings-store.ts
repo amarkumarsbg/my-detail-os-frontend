@@ -50,6 +50,10 @@ export interface SerializableAppSettings {
   bankAccountNumber: string;
   bankIfsc: string;
   bankUpi: string;
+  /** Org-level name shown on the business identity card (not the logged-in user). */
+  identityContactName: string;
+  /** When true, the identity card is shown on the Business settings tab. */
+  identityCardEnabled: boolean;
   referralRewardAmount: number;
   newCustomerDiscount: number;
   whatsappReminderEnabled: boolean;
@@ -98,6 +102,8 @@ export const DEFAULT_SERIALIZABLE_APP_SETTINGS: SerializableAppSettings = {
   bankAccountNumber: "[Account Number]",
   bankIfsc: "[IFSC Code]",
   bankUpi: "[UPI ID or Number]",
+  identityContactName: "",
+  identityCardEnabled: false,
   referralRewardAmount: 500,
   newCustomerDiscount: 200,
   whatsappReminderEnabled: true,
@@ -145,6 +151,8 @@ function sliceSerializable(s: SerializableAppSettings): SerializableAppSettings 
     bankAccountNumber: s.bankAccountNumber,
     bankIfsc: s.bankIfsc,
     bankUpi: s.bankUpi,
+    identityContactName: s.identityContactName,
+    identityCardEnabled: s.identityCardEnabled,
     referralRewardAmount: s.referralRewardAmount,
     newCustomerDiscount: s.newCustomerDiscount,
     whatsappReminderEnabled: s.whatsappReminderEnabled,
@@ -200,6 +208,7 @@ export function mergeAppSettingsPayload(raw: unknown): Partial<SerializableAppSe
     "bankAccountNumber",
     "bankIfsc",
     "bankUpi",
+    "identityContactName",
     "loginHeroHeading",
     "loginHeroDescription"
   );
@@ -212,6 +221,8 @@ export function mergeAppSettingsPayload(raw: unknown): Partial<SerializableAppSe
   if (nd !== undefined) next.newCustomerDiscount = nd;
   const wa = bool("whatsappReminderEnabled");
   if (wa !== undefined) next.whatsappReminderEnabled = wa;
+  const ice = bool("identityCardEnabled");
+  if (ice !== undefined) next.identityCardEnabled = ice;
   const lead = num("reminderLeadDays");
   if (lead !== undefined) next.reminderLeadDays = Math.max(0, Math.floor(lead));
   if (typeof o.reminderPaymentFrequency === "string") {
@@ -268,6 +279,8 @@ interface SettingsState extends SerializableAppSettings {
         | "bankAccountNumber"
         | "bankIfsc"
         | "bankUpi"
+        | "identityContactName"
+        | "identityCardEnabled"
         | "loginBackgroundImage"
         | "loginHeroHeading"
         | "loginHeroDescription"

@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useState, type ReactNode } from "react";
 import { toast } from "sonner";
-import { Eye, Megaphone, Pencil, Search, Send, Users } from "lucide-react";
+import { Eye, Megaphone, Pencil, Save, Search, Send, Users } from "lucide-react";
 import { PageHeader } from "@/components/shared/page-header";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -38,6 +38,7 @@ import {
   openWhatsAppComposer,
   isWhatsAppNotConfiguredError,
 } from "@/lib/whatsapp-send";
+import { normalizePhoneDigits } from "@/lib/phone";
 import { cn, formatCurrency, formatDate, getInitials } from "@/lib/utils";
 import type {
   OfferApplicableOn,
@@ -141,6 +142,8 @@ export default function OffersPage() {
   const [messageMode, setMessageMode] = useState<"edit" | "preview">("edit");
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [search, setSearch] = useState("");
+  const [guestPhones, setGuestPhones] = useState("");
+  const [saving, setSaving] = useState(false);
   const [sending, setSending] = useState(false);
   const [loadOfferId, setLoadOfferId] = useState<string>("");
 
@@ -245,12 +248,23 @@ export default function OffersPage() {
     filteredCustomers.length > 0 &&
     filteredCustomers.every((c) => selectedIds.has(c.id));
 
-  const recentSent = useMemo(
+  const guestPhoneList = useMemo(() => {
+    const seen = new Set<string>();
+    const out: string[] = [];
+    for (const raw of guestPhones.split(/[\s,;]+/)) {
+      const digits = normalizePhoneDigits(raw);
+      if (digits.length !== 10 || seen.has(digits)) continue;
+      seen.add(digits);
+      out.push(digits);
+    }
+    return out;
+  }, [guestPhones]);
+
+  const recentOffers = useMemo(
     () =>
       [...offers]
-        .filter((o) => o.status === "SENT")
-        .sort((a, b) => (b.sentAt ?? b.createdAt).localeCompare(a.sentAt ?? a.createdAt))
-        .slice(0, 20),
+        .sort((a, b) => (b.updatedAt || b.createdAt).localeCompare(a.updatedAt || a.createdAt))
+        .slice(0, 30),
     [offers]
   );
 
@@ -320,57 +334,107 @@ export default function OffersPage() {
     });
   };
 
-  const canSend =
+  const canSave =
     name.trim().length > 0 &&
     code.trim().length > 0 &&
     validTill.trim().length > 0 &&
     discountValue > 0 &&
     details.trim().length > 0 &&
-    messageText.trim().length > 0 &&
-    selectedCount > 0 &&
     (scope !== "SPECIFIC_ITEMS" || applicableItemIds.size > 0) &&
+    !saving &&
     !sending;
+
+  const canSend =
+    canSave && messageText.trim().length > 0 && (selectedCount > 0 || guestPhoneList.length > 0);
+
+  const buildOfferRecord = (id: string, now: string, status: OfferBroadcast["status"]): OfferBroadcast => ({
+    id,
+    name: name.trim(),
+    code: code.trim().toUpperCase(),
+    validFrom: validFrom.trim() || undefined,
+    validTill,
+    discountType,
+    discountValue,
+    minBillAmount: minBillAmount > 0 ? minBillAmount : undefined,
+    maxDiscount,
+    applicableOn,
+    scope,
+    applicableItemIds:
+      scope === "SPECIFIC_ITEMS" ? Array.from(applicableItemIds) : undefined,
+    details: details.trim(),
+    customMessage: messageText.trim() || undefined,
+    selectedCustomerIds: Array.from(selectedIds),
+    status,
+    sentCount: 0,
+    createdAt: now,
+    updatedAt: now,
+  });
+
+  const persistOffer = async (
+    status: OfferBroadcast["status"],
+    extra?: Partial<OfferBroadcast>
+  ): Promise<OfferBroadcast> => {
+    const now = new Date().toISOString();
+    const existing = loadOfferId ? offers.find((o) => o.id === loadOfferId) : undefined;
+    const id = existing?.id ?? newOfferId();
+    const record: OfferBroadcast = {
+      ...buildOfferRecord(id, existing?.createdAt ?? now, status),
+      createdAt: existing?.createdAt ?? now,
+      sentAt: extra?.sentAt ?? existing?.sentAt,
+      sentCount: extra?.sentCount ?? existing?.sentCount ?? 0,
+      status: extra?.status ?? status,
+    };
+    if (existing) {
+      await updateOffer(id, record);
+    } else {
+      await addOffer(record);
+      setLoadOfferId(id);
+    }
+    return record;
+  };
+
+  const saveCoupon = async () => {
+    if (!canSave) {
+      toast.error("Complete the coupon details before saving");
+      return;
+    }
+    setSaving(true);
+    try {
+      const existing = loadOfferId ? offers.find((o) => o.id === loadOfferId) : undefined;
+      const saved = await persistOffer(existing?.status === "SENT" ? "SENT" : "DRAFT");
+      toast.success(
+        selectedCount > 0
+          ? `Coupon ${saved.code} saved for ${selectedCount} selected customer${selectedCount === 1 ? "" : "s"}`
+          : `Coupon ${saved.code} saved — anyone can redeem this code at booking`
+      );
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Could not save coupon");
+    } finally {
+      setSaving(false);
+    }
+  };
 
   const sendBroadcast = async () => {
     if (!canSend) {
-      toast.error("Complete the offer and select at least one customer");
+      toast.error("Save the coupon details and add at least one registered customer or guest phone");
       return;
     }
-    const recipients = customers.filter((c) => selectedIds.has(c.id) && c.phone?.trim());
-    if (recipients.length === 0) {
-      toast.error("Selected customers need a phone number");
+    const registered = customers.filter((c) => selectedIds.has(c.id) && c.phone?.trim());
+    const registeredDigits = new Set(
+      registered.map((c) => normalizePhoneDigits(c.phone)).filter((d) => d.length === 10)
+    );
+    const guestRecipients = guestPhoneList.filter((p) => !registeredDigits.has(p));
+    if (registered.length === 0 && guestRecipients.length === 0) {
+      toast.error("Add a phone number to send this offer");
       return;
     }
 
     const messageTemplate = messageText.trim();
     setSending(true);
-    const now = new Date().toISOString();
-    const offerId = newOfferId();
-    const draft: OfferBroadcast = {
-      id: offerId,
-      name: name.trim(),
-      code: code.trim().toUpperCase(),
-      validFrom: validFrom.trim() || undefined,
-      validTill,
-      discountType,
-      discountValue,
-      minBillAmount: minBillAmount > 0 ? minBillAmount : undefined,
-      maxDiscount,
-      applicableOn,
-      scope,
-      applicableItemIds:
-        scope === "SPECIFIC_ITEMS" ? Array.from(applicableItemIds) : undefined,
-      details: details.trim(),
-      customMessage: messageTemplate,
-      selectedCustomerIds: recipients.map((c) => c.id),
-      status: "DRAFT",
-      sentCount: 0,
-      createdAt: now,
-      updatedAt: now,
-    };
-
+    let offerId = "";
     try {
-      await addOffer(draft);
+      const saved = await persistOffer("DRAFT");
+      offerId = saved.id;
     } catch (e) {
       setSending(false);
       toast.error(e instanceof Error ? e.message : "Could not save offer");
@@ -381,25 +445,34 @@ export default function OffersPage() {
     let composerFallback = 0;
     let failed = 0;
 
-    for (let i = 0; i < recipients.length; i++) {
-      const customer = recipients[i];
-      const message = personalizeOfferWhatsAppMessage(messageTemplate, customer.name);
+    const sendOne = async (phone: string, displayName: string) => {
+      const message = personalizeOfferWhatsAppMessage(messageTemplate, displayName);
       try {
-        await sendCustomerWhatsApp(customer.phone, message);
+        await sendCustomerWhatsApp(phone, message);
         sentOk += 1;
       } catch (e) {
         if (isWhatsAppNotConfiguredError(e)) {
-          openWhatsAppComposer(customer.phone, message);
+          openWhatsAppComposer(phone, message);
           composerFallback += 1;
         } else {
           failed += 1;
           console.warn("[offers-broadcast]", e instanceof ApiError ? e.message : e);
         }
       }
-      if (i < recipients.length - 1) await sleep(SEND_DELAY_MS);
+    };
+
+    for (let i = 0; i < registered.length; i++) {
+      const customer = registered[i];
+      await sendOne(customer.phone, customer.name);
+      if (i < registered.length - 1 || guestRecipients.length > 0) await sleep(SEND_DELAY_MS);
+    }
+    for (let i = 0; i < guestRecipients.length; i++) {
+      await sendOne(guestRecipients[i], "there");
+      if (i < guestRecipients.length - 1) await sleep(SEND_DELAY_MS);
     }
 
     const totalTouched = sentOk + composerFallback;
+    const totalRecipients = registered.length + guestRecipients.length;
     try {
       await updateOffer(offerId, {
         status: totalTouched > 0 ? "SENT" : "DRAFT",
@@ -413,7 +486,7 @@ export default function OffersPage() {
     useNotificationStore.getState().addNotification({
       type: "whatsapp_sent",
       title: "Offer broadcast",
-      message: `${draft.name}: ${totalTouched}/${recipients.length} customers`,
+      message: `${name.trim()}: ${totalTouched}/${totalRecipients} recipients`,
       href: "/offers",
     });
 
@@ -424,8 +497,6 @@ export default function OffersPage() {
             ? `${sentOk} sent via API, ${composerFallback} opened in WhatsApp${failed ? `, ${failed} failed` : ""}.`
             : `${sentOk} message${sentOk === 1 ? "" : "s"} sent${failed ? `, ${failed} failed` : ""}.`,
       });
-      setSelectedIds(new Set());
-      setLoadOfferId("");
     } else {
       toast.error("No messages sent", {
         description: failed
@@ -444,16 +515,29 @@ export default function OffersPage() {
         hideDescriptionOnMobile
         inlineActionsOnMobile
         actions={
-          <Button
-            type="button"
-            size="sm"
-            className="gap-1.5 shadow-sm"
-            disabled={!canSend}
-            onClick={() => void sendBroadcast()}
-          >
-            <Send className="h-3.5 w-3.5" />
-            {sending ? "Sending…" : "Send broadcast"}
-          </Button>
+          <div className="flex items-center gap-2">
+            <Button
+              type="button"
+              size="sm"
+              variant="outline"
+              className="gap-1.5 shadow-sm"
+              disabled={!canSave}
+              onClick={() => void saveCoupon()}
+            >
+              <Save className="h-3.5 w-3.5" />
+              {saving ? "Saving…" : "Save coupon"}
+            </Button>
+            <Button
+              type="button"
+              size="sm"
+              className="gap-1.5 shadow-sm"
+              disabled={!canSend}
+              onClick={() => void sendBroadcast()}
+            >
+              <Send className="h-3.5 w-3.5" />
+              {sending ? "Sending…" : "Send broadcast"}
+            </Button>
+          </div>
         }
       />
 
@@ -467,7 +551,7 @@ export default function OffersPage() {
             <div className="min-w-0">
               <h2 className="text-sm font-semibold tracking-tight">Offer composer</h2>
               <p className="text-xs text-muted-foreground">
-                Fields draft a WhatsApp message you can edit before sending.
+                Fields save as a redeemable coupon. WhatsApp send is optional.
               </p>
             </div>
           </div>
@@ -819,12 +903,32 @@ export default function OffersPage() {
               </span>
               <div className="min-w-0">
                 <h2 className="text-sm font-semibold tracking-tight">Audience</h2>
-                <p className="text-xs text-muted-foreground">Choose who receives this offer.</p>
+                <p className="text-xs text-muted-foreground">
+                  Optional. Leave empty so anyone can redeem the code.
+                </p>
               </div>
             </div>
             <Badge variant="secondary" className="tabular-nums shrink-0">
               {selectedCount} selected
             </Badge>
+          </div>
+
+          <div className="space-y-2 border-b border-border/60 px-4 py-2.5 sm:px-5">
+            <Label htmlFor="offer-guest-phones" className="text-xs">
+              Send to unregistered numbers
+            </Label>
+            <Input
+              id="offer-guest-phones"
+              value={guestPhones}
+              onChange={(e) => setGuestPhones(e.target.value)}
+              placeholder="e.g. 9876543210, 9123456789"
+              className="h-9"
+            />
+            <p className="text-[11px] text-muted-foreground">
+              {guestPhoneList.length > 0
+                ? `${guestPhoneList.length} guest number${guestPhoneList.length === 1 ? "" : "s"} ready to send. They do not need to be in Customers.`
+                : "Paste 10-digit numbers separated by comma or space. The coupon still works at booking for walk-ins if no customers are selected."}
+            </p>
           </div>
 
           <div className="flex items-center gap-2 border-b border-border/60 px-4 py-2.5 sm:px-5">
@@ -855,7 +959,8 @@ export default function OffersPage() {
                 </span>
                 <p className="text-sm font-medium">No customers found</p>
                 <p className="max-w-xs text-xs text-muted-foreground">
-                  Add customers first, or clear the search filter.
+                  No registered customers match. Save the coupon anyway, or send to guest
+                  numbers above.
                 </p>
               </div>
             ) : (
@@ -899,7 +1004,17 @@ export default function OffersPage() {
             )}
           </div>
 
-          <div className="border-t border-border/70 px-4 py-3 sm:px-5">
+          <div className="space-y-2 border-t border-border/70 px-4 py-3 sm:px-5">
+            <Button
+              type="button"
+              variant="outline"
+              className="w-full gap-1.5"
+              disabled={!canSave}
+              onClick={() => void saveCoupon()}
+            >
+              <Save className="h-3.5 w-3.5" />
+              {saving ? "Saving…" : "Save coupon"}
+            </Button>
             <Button
               type="button"
               className="w-full gap-1.5"
@@ -909,13 +1024,13 @@ export default function OffersPage() {
               <Send className="h-3.5 w-3.5" />
               {sending
                 ? "Sending…"
-                : selectedCount > 0
-                  ? `Send to ${selectedCount} customer${selectedCount === 1 ? "" : "s"}`
-                  : "Select customers to send"}
+                : selectedCount + guestPhoneList.length > 0
+                  ? `Send to ${selectedCount + guestPhoneList.length} recipient${selectedCount + guestPhoneList.length === 1 ? "" : "s"}`
+                  : "Add customers or guest numbers to send"}
             </Button>
-            <p className="mt-2 text-[11px] leading-snug text-muted-foreground">
-              Selected customers receive WhatsApp and can redeem this code on booking. Uses the
-              WhatsApp API when configured; otherwise opens the composer per recipient.
+            <p className="text-[11px] leading-snug text-muted-foreground">
+              Save stores the coupon so it can be redeemed on booking. Send is optional and
+              works for registered customers or numbers that are not in the workshop yet.
             </p>
           </div>
         </section>
@@ -924,12 +1039,12 @@ export default function OffersPage() {
       {/* History */}
       <section className="overflow-hidden rounded-2xl border border-border/80 bg-card shadow-sm">
         <div className="flex items-center justify-between gap-2 border-b border-border/70 px-4 py-3 sm:px-5">
-          <h2 className="text-sm font-semibold tracking-tight">Recent broadcasts</h2>
-          <span className="text-xs text-muted-foreground tabular-nums">{recentSent.length}</span>
+          <h2 className="text-sm font-semibold tracking-tight">Saved coupons</h2>
+          <span className="text-xs text-muted-foreground tabular-nums">{recentOffers.length}</span>
         </div>
-        {recentSent.length === 0 ? (
+        {recentOffers.length === 0 ? (
           <p className="px-4 py-8 text-center text-sm text-muted-foreground sm:px-5">
-            Sent offers will show up here.
+            Saved and sent coupons will show up here.
           </p>
         ) : (
           <div className="overflow-x-auto">
@@ -940,12 +1055,12 @@ export default function OffersPage() {
                   <th className="px-3 py-2.5 font-medium">Code</th>
                   <th className="px-3 py-2.5 font-medium">Discount</th>
                   <th className="px-3 py-2.5 font-medium">Recipients</th>
-                  <th className="px-3 py-2.5 font-medium">Sent</th>
+                  <th className="px-3 py-2.5 font-medium">Updated</th>
                   <th className="px-4 py-2.5 font-medium sm:px-5">Status</th>
                 </tr>
               </thead>
               <tbody>
-                {recentSent.map((o) => (
+                {recentOffers.map((o) => (
                   <tr key={o.id} className="border-b border-border/40 last:border-0">
                     <td className="px-4 py-3 sm:px-5">
                       <p className="font-medium">{o.name}</p>
@@ -954,6 +1069,7 @@ export default function OffersPage() {
                         {o.minBillAmount && o.minBillAmount > 0
                           ? ` · Min ${formatCurrency(o.minBillAmount)}`
                           : ""}
+                        {(o.selectedCustomerIds?.length ?? 0) === 0 ? " · All customers" : ""}
                       </p>
                     </td>
                     <td className="px-3 py-3 font-mono text-xs">{o.code}</td>
@@ -962,11 +1078,11 @@ export default function OffersPage() {
                     </td>
                     <td className="px-3 py-3 tabular-nums">{o.sentCount}</td>
                     <td className="px-3 py-3 text-muted-foreground">
-                      {o.sentAt ? formatDate(o.sentAt) : "—"}
+                      {formatDate(o.updatedAt || o.sentAt || o.createdAt)}
                     </td>
                     <td className="px-4 py-3 sm:px-5">
-                      <Badge variant="success" className="text-[10px]">
-                        Sent
+                      <Badge variant={o.status === "SENT" ? "success" : "secondary"} className="text-[10px]">
+                        {o.status === "SENT" ? "Sent" : "Saved"}
                       </Badge>
                     </td>
                   </tr>

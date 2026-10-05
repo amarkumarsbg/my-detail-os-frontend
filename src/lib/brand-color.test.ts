@@ -1,14 +1,22 @@
-import { describe, expect, it } from "vitest";
+// @vitest-environment jsdom
+
+import { afterEach, describe, expect, it } from "vitest";
 import {
+  applyBrandFavicon,
   contrastForeground,
   DEFAULT_BRAND_PRIMARY,
   isValidHex,
   matchingBrandPresetId,
   normalizeHex,
+  PLATFORM_FAVICON_HREF,
   resolveBrandCssVars,
 } from "./brand-color";
 
 describe("brand-color", () => {
+  afterEach(() => {
+    document.head.replaceChildren();
+  });
+
   it("normalizes #RGB and #RRGGBB", () => {
     expect(normalizeHex("#0a9")).toBe("#00AA99");
     expect(normalizeHex("#059669")).toBe("#059669");
@@ -38,5 +46,33 @@ describe("brand-color", () => {
   it("matches presets", () => {
     expect(matchingBrandPresetId("#059669")).toBe("green");
     expect(matchingBrandPresetId("#112233")).toBeNull();
+  });
+
+  it("preserves framework-owned favicon nodes when applying the platform logo", () => {
+    const icons = ["/favicon.png", "/icon.png", "data:image/svg+xml,test"].map(
+      (href) => {
+        const icon = document.createElement("link");
+        icon.rel = href.startsWith("data:") ? "shortcut icon" : "icon";
+        icon.href = href;
+        document.head.appendChild(icon);
+        return icon;
+      }
+    );
+    const appleIcon = document.createElement("link");
+    appleIcon.rel = "apple-touch-icon";
+    appleIcon.href = "/apple-touch-icon.png";
+    document.head.appendChild(appleIcon);
+
+    applyBrandFavicon();
+    applyBrandFavicon();
+
+    for (const icon of icons) {
+      expect(icon.parentNode).toBe(document.head);
+      expect(icon.getAttribute("href")).toBe(PLATFORM_FAVICON_HREF);
+      expect(icon.type).toBe("image/png");
+    }
+    expect(document.querySelectorAll("link[data-brand-favicon]")).toHaveLength(1);
+    expect(appleIcon.getAttribute("href")).toBe("/apple-touch-icon.png");
+    expect(appleIcon.parentNode).toBe(document.head);
   });
 });

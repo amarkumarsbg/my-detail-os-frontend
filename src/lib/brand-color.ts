@@ -140,7 +140,6 @@ export function applyBrandFavicon(_hex?: string): void {
   link.type = "image/png";
   link.href = PLATFORM_FAVICON_HREF;
 
-  // Drop competing icon links so the logo wins in the tab.
   for (const el of document.querySelectorAll<HTMLLinkElement>(
     'link[rel="icon"], link[rel="shortcut icon"]'
   )) {
@@ -151,7 +150,8 @@ export function applyBrandFavicon(_hex?: string): void {
       href.includes("favicon") ||
       href.startsWith("data:image/svg")
     ) {
-      el.remove();
+      el.type = "image/png";
+      el.href = PLATFORM_FAVICON_HREF;
     }
   }
 }

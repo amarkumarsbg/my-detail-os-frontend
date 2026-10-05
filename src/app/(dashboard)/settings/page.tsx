@@ -50,6 +50,7 @@ import {
 } from "@/components/settings/high-end-segment-pricing-fields";
 import { useVehicleCatalogStore } from "@/store/vehicle-catalog-store";
 import { BrandingThemePanel } from "@/components/settings/branding-theme-panel";
+import { BusinessIdentityCard } from "@/components/settings/business-identity-card";
 import { useDomainDataReady } from "@/components/layout/domain-data-sync";
 import type {
   CompanyTargetTierConfig,
@@ -91,6 +92,7 @@ import {
   LockKeyhole,
   Unlock,
   Copy,
+  IdCard,
 } from "lucide-react";
 import {
   branchLimitLabel,
@@ -224,6 +226,8 @@ export default function SettingsPage() {
   const [bankAccountNumber, setBankAccountNumber] = useState(settings.bankAccountNumber);
   const [bankIfsc, setBankIfsc] = useState(settings.bankIfsc);
   const [bankUpi, setBankUpi] = useState(settings.bankUpi);
+  const [identityContactName, setIdentityContactName] = useState(settings.identityContactName);
+  const [businessPanel, setBusinessPanel] = useState<"profile" | "card">("profile");
 
   const [defaultTaxRate, setDefaultTaxRate] = useState("18");
   const [taxRates, setTaxRates] = useState([
@@ -650,6 +654,7 @@ export default function SettingsPage() {
         bankAccountNumber,
         bankIfsc,
         bankUpi,
+        identityContactName,
       });
     }
 
@@ -1040,21 +1045,72 @@ export default function SettingsPage() {
           </div>
         </TabsContent>
 
-        <TabsContent value="business">
+        <TabsContent value="business" className="space-y-4">
           <Card>
             <CardHeader>
-              <CardTitle className="text-base flex items-center gap-2">
-                <Building2 className="w-4 h-4" />
-                Business Profile
+              <CardTitle className="text-base flex items-center gap-3">
+                {businessPanel === "card" ? (
+                  <IdCard className="w-4 h-4 shrink-0" />
+                ) : (
+                  <Building2 className="w-4 h-4 shrink-0" />
+                )}
+                <button
+                  type="button"
+                  onClick={() => setBusinessPanel("profile")}
+                  className={cn(
+                    "transition-colors",
+                    businessPanel === "profile"
+                      ? "text-foreground"
+                      : "text-muted-foreground hover:text-foreground font-medium"
+                  )}
+                >
+                  Business Profile
+                </button>
+                <span className="h-4 w-px bg-border" aria-hidden />
+                <button
+                  type="button"
+                  onClick={() => setBusinessPanel("card")}
+                  className={cn(
+                    "transition-colors",
+                    businessPanel === "card"
+                      ? "text-foreground"
+                      : "text-muted-foreground hover:text-foreground font-medium"
+                  )}
+                >
+                  Business card
+                </button>
               </CardTitle>
             </CardHeader>
             <CardContent>
               <div className="space-y-5">
+                {businessPanel === "card" ? (
+                  <BusinessIdentityCard
+                    previewName={businessName}
+                    previewContact={identityContactName}
+                    previewPhone={businessPhone}
+                    previewEmail={businessEmail}
+                    previewAddress={businessAddress}
+                  />
+                ) : null}
+
+                {businessPanel === "profile" ? (
+                <>
                 <div className="grid grid-cols-1 xl:grid-cols-2 gap-6 items-start">
                   <div className="space-y-5">
                     <div className="space-y-2">
                       <Label>Company Name</Label>
                       <Input value={businessName} onChange={(e) => setBusinessName(e.target.value)} />
+                    </div>
+                    <div className="space-y-2">
+                      <Label>Identity contact name</Label>
+                      <Input
+                        value={identityContactName}
+                        onChange={(e) => setIdentityContactName(e.target.value)}
+                        placeholder="Name shown on the identity card"
+                      />
+                      <p className="text-[11px] text-muted-foreground">
+                        Workshop/org contact for the card. Leave blank to use the company name.
+                      </p>
                     </div>
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                       <div className="space-y-2">
@@ -1128,6 +1184,8 @@ export default function SettingsPage() {
                 <Button onClick={() => handleSave("Business profile")}>
                   <Save className="w-4 h-4 mr-2" />Save Changes
                 </Button>
+                </>
+                ) : null}
               </div>
             </CardContent>
           </Card>
