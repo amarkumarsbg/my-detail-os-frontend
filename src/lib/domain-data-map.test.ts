@@ -63,6 +63,12 @@ describe("resourcesForPath", () => {
     expect(r).toContain("payroll");
   });
 
+  it("loads inspection customer and vehicle dependencies on direct and tenant-prefixed routes", () => {
+    for (const path of ["/inspections", "/inspections/new", "/inspections/i1", "/my-detail-os/inspections/new"]) {
+      expect(resourcesForPath(path)).toEqual(["customers", "vehicles", "vehicleCatalog", "jobCards", "appSettings"]);
+    }
+  });
+
   it("strips tenant org slug before matching route packs", () => {
     const r = resourcesForPath("/my-detail-os/activity");
     expect(r).toContain("activityLogs");

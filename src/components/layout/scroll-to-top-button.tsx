@@ -5,6 +5,7 @@ import { usePathname } from "next/navigation";
 import { ChevronUp } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
+import { stripOrgSlugFromPath } from "@/lib/tenant";
 
 const SHOW_AFTER_PX = 280;
 const SHOW_AFTER_JOB_DETAIL_PX = 520;
@@ -22,6 +23,7 @@ export function ScrollToTopButton({
   const pathname = usePathname();
   const [visible, setVisible] = useState(false);
   const isJobCardDetail = JOB_CARD_DETAIL_RE.test(pathname);
+  const isInspectionEditor = /^\/inspections\/[^/]+$/.test(stripOrgSlugFromPath(pathname));
   const hasStickyActionBar = STICKY_ACTION_BAR_PATHS.has(pathname) || isJobCardDetail;
   const showAfterPx = isJobCardDetail ? SHOW_AFTER_JOB_DETAIL_PX : SHOW_AFTER_PX;
 
@@ -48,7 +50,9 @@ export function ScrollToTopButton({
         "fixed z-40 hidden rounded-full shadow-md transition-opacity duration-200 md:inline-flex",
         "right-3 md:right-8",
         isJobCardDetail ? "h-7 w-7 md:h-9 md:w-9" : "h-8 w-8 md:h-10 md:w-10",
-        isJobCardDetail
+        isInspectionEditor
+          ? "bottom-[calc(8rem+env(safe-area-inset-bottom))] md:bottom-28"
+          : isJobCardDetail
           ? "bottom-[calc(10.5rem+env(safe-area-inset-bottom))] md:bottom-8"
           : hasStickyActionBar
             ? "bottom-[calc(8rem+env(safe-area-inset-bottom))] md:bottom-6"

@@ -75,6 +75,7 @@ export const NAV_GROUPS: { label: string; items: NavItemDef[] }[] = [
   {
     label: "Workshop",
     items: [
+      { label: "Vehicle Inspections", href: "/inspections", icon: ClipboardList, permissionKey: "JOB_CARDS" },
       { label: "Services", href: "/services", icon: Wrench, roles: ["ADMIN", "MANAGER"], permissionKey: "SERVICES" },
       {
         label: "Inventory Hub",
@@ -196,6 +197,7 @@ const EXTRA_PAGE_TITLES: { href: string; label: string }[] = [
 ];
 
 const NAV_DESCRIPTIONS: Record<string, string> = {
+  "/inspections": "Vehicle condition reports and diagnostic checklists",
   "/job-cards": "Create and manage job cards, track workshop progress, and close deliveries",
   "/bookings": "Create walk-in and scheduled bookings, then convert them to job cards",
   "/pickup-drop": "Schedule vehicle pickup and delivery and track driver assignments",

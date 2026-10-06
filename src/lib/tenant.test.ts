@@ -14,6 +14,7 @@ describe("tenant helpers", () => {
     expect(isReservedSlug("_next")).toBe(true);
     expect(isReservedSlug("offers")).toBe(true);
     expect(isReservedSlug("support")).toBe(true);
+    expect(isReservedSlug("inspections")).toBe(true);
     expect(isReservedSlug("abcd-detailers")).toBe(false);
     // Real org slugs must NOT be reserved or /{slug}/login 404s
     expect(isReservedSlug("prime-detailers")).toBe(false);
@@ -27,6 +28,7 @@ describe("tenant helpers", () => {
     expect(parseOrgSlugFromPathname("/saas-admin/organizations")).toBe(null);
     expect(parseOrgSlugFromPathname("/offers")).toBe(null);
     expect(parseOrgSlugFromPathname("/support")).toBe(null);
+    expect(parseOrgSlugFromPathname("/inspections/new")).toBe(null);
   });
 
   it("strips org slug for route matching", () => {

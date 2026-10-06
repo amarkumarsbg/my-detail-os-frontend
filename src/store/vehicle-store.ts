@@ -18,6 +18,22 @@ export type VehicleBulkImportResult = {
   skippedCount: number;
 };
 
+export async function fetchCustomerVehicles(customerId: string): Promise<Vehicle[]> {
+  const vehicles = new Map<string, Vehicle>();
+  for (let page = 1; ; page++) {
+    const query = new URLSearchParams({ customerId, page: String(page), pageSize: "50" });
+    const result = await apiGet<{
+      vehicles: Vehicle[];
+      metadata?: { totalPages: number };
+    }>(`/api/vehicles?${query}`);
+    for (const vehicle of result.vehicles) {
+      if (vehicle.customerId === customerId) vehicles.set(vehicle.id, vehicle);
+    }
+    if (!result.metadata || page >= result.metadata.totalPages) break;
+  }
+  return [...vehicles.values()];
+}
+
 interface VehicleStore {
   vehicles: Vehicle[];
   vehiclesLoading: boolean;

@@ -249,6 +249,10 @@ const ROUTE_PACKS: { prefix: string; resources: DomainResource[] }[] = [
     resources: ["vehicles", "customers", "serviceReminders", "jobCards", "vehicleCatalog"],
   },
   {
+    prefix: "/inspections",
+    resources: ["customers", "vehicles", "vehicleCatalog", "jobCards", "appSettings"],
+  },
+  {
     prefix: "/branches",
     resources: ["staffDirectory", "jobCards", "expenses", "pickupDropRequests", "payroll"],
   },

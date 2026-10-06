@@ -77,6 +77,19 @@ export async function apiGet<T>(path: string): Promise<T> {
   return parseResponse<T>(res);
 }
 
+export async function apiGetBlob(path: string): Promise<Blob> {
+  const res = await fetch(buildApiUrl(path), {
+    method: "GET",
+    headers: authHeaders(),
+    cache: "no-store",
+  });
+  if (!res.ok) {
+    await parseResponse<never>(res);
+    throw new ApiError(res.status, res.statusText || "Request failed");
+  }
+  return res.blob();
+}
+
 export async function apiPost<T>(path: string, body: unknown): Promise<T> {
   const res = await fetch(buildApiUrl(path), {
     method: "POST",
