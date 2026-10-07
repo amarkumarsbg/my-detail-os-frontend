@@ -551,6 +551,9 @@ export default function StaffPage() {
     [staff, branches, staffJobStatsById, canManageUsers, deletingUserBusy]
   );
 
+  const maxEmployeeCodeAttempts = 20;
+  const employeeCodeConflict = /employee\s*code.*(already.*(in use|exist)|duplicate)/i;
+
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     if (!canCreateStaffAccounts(authRole)) {
@@ -590,8 +593,6 @@ export default function StaffPage() {
         }
       }
     }
-    const finalEmployeeCode = `EMP-${String(maxNumber + 1).padStart(3, "0")}`;
-
     const branchId = branchLocked && authUser?.branchId ? authUser.branchId : newBranchId;
     const permissions = buildInitialPermissions(
       newRole,
@@ -599,17 +600,32 @@ export default function StaffPage() {
     );
     setCreatingUser(true);
     try {
-      const { temporaryPassword, credentialsEmailSent } = await addStaff({
-        name,
-        email,
-        phone,
-        role: newRole,
-        branchId,
-        isActive: true,
-        employeeCode: finalEmployeeCode,
-        isAttendanceTracked: true,
-        ...(permissions.length > 0 ? { permissions } : {}),
-      });
+      let finalEmployeeCode = "";
+      let createResult: Awaited<ReturnType<typeof addStaff>> | undefined;
+      for (let attempt = 0; attempt < maxEmployeeCodeAttempts; attempt += 1) {
+        finalEmployeeCode = `EMP-${String(maxNumber + attempt + 1).padStart(3, "0")}`;
+        try {
+          createResult = await addStaff({
+            name,
+            email,
+            phone,
+            role: newRole,
+            branchId,
+            isActive: true,
+            employeeCode: finalEmployeeCode,
+            isAttendanceTracked: true,
+            ...(permissions.length > 0 ? { permissions } : {}),
+          });
+          break;
+        } catch (error) {
+          if (!(error instanceof ApiError) || !employeeCodeConflict.test(error.message)) throw error;
+          if (attempt === maxEmployeeCodeAttempts - 1) {
+            throw new Error("Could not assign a unique employee code. Refresh the staff list and try again.");
+          }
+        }
+      }
+      if (!createResult) throw new Error("Could not create the staff account. Please try again.");
+      const { temporaryPassword, credentialsEmailSent } = createResult;
       pushActivityLog({
         action: "CREATED",
         entityType: "STAFF",
