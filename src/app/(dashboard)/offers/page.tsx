@@ -1,8 +1,8 @@
 "use client";
 
-import { useEffect, useMemo, useState, type ReactNode } from "react";
+import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { toast } from "sonner";
-import { Eye, Megaphone, Pencil, Save, Search, Send, Users } from "lucide-react";
+import { Eye, Megaphone, Pencil, Save, Search, Send, Trash2, Users } from "lucide-react";
 import { PageHeader } from "@/components/shared/page-header";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -10,6 +10,7 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Badge } from "@/components/ui/badge";
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import {
   Select,
   SelectContent,
@@ -122,7 +123,9 @@ export default function OffersPage() {
   const offers = useOfferStore((s) => s.offers);
   const addOffer = useOfferStore((s) => s.addOffer);
   const updateOffer = useOfferStore((s) => s.updateOffer);
+  const removeOffer = useOfferStore((s) => s.removeOffer);
   const businessName = useSettingsStore((s) => s.businessName);
+  const composerRef = useRef<HTMLElement | null>(null);
 
   const [name, setName] = useState("");
   const [code, setCode] = useState("");
@@ -146,6 +149,8 @@ export default function OffersPage() {
   const [saving, setSaving] = useState(false);
   const [sending, setSending] = useState(false);
   const [loadOfferId, setLoadOfferId] = useState<string>("");
+  const [deleteTarget, setDeleteTarget] = useState<OfferBroadcast | null>(null);
+  const [deleting, setDeleting] = useState(false);
 
   const serviceCatalog = useServiceCatalogStore((s) => s.catalog);
   const inventoryParts = useInventoryStore((s) => s.parts);
@@ -268,14 +273,42 @@ export default function OffersPage() {
     [offers]
   );
 
+  const resetOfferForm = () => {
+    setLoadOfferId("");
+    setName("");
+    setCode("");
+    setValidFrom("");
+    setValidTill("");
+    setDiscountType("PERCENTAGE");
+    setDiscountValueInput("");
+    setMinBillInput("");
+    setMaxDiscountInput("");
+    setApplicableOn("FULL_BILL");
+    setScope("ALL_ITEMS");
+    setApplicableItemIds(new Set());
+    setItemSearch("");
+    setDetails("");
+    setMessageText("");
+    setMessageMode("edit");
+    setSelectedIds(new Set());
+    setSearch("");
+    setGuestPhones("");
+    setMessageDirty(false);
+  };
+
   const loadOffer = (id: string) => {
-    setLoadOfferId(id);
     if (!id) {
+      resetOfferForm();
+      return;
+    }
+    setLoadOfferId(id);
+    setMessageMode("edit");
+    setGuestPhones("");
+    const offer = offers.find((o) => o.id === id);
+    if (!offer) {
       setMessageDirty(false);
       return;
     }
-    const offer = offers.find((o) => o.id === id);
-    if (!offer) return;
     setName(offer.name);
     setCode(offer.code);
     setValidFrom(offer.validFrom?.slice(0, 10) ?? "");
@@ -306,6 +339,21 @@ export default function OffersPage() {
       setMessageDirty(true);
     } else {
       setMessageDirty(false);
+    }
+  };
+
+  const deleteCoupon = async () => {
+    if (!deleteTarget) return;
+    setDeleting(true);
+    try {
+      await removeOffer(deleteTarget.id);
+      if (loadOfferId === deleteTarget.id) resetOfferForm();
+      toast.success(`Coupon ${deleteTarget.code} deleted`);
+      setDeleteTarget(null);
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Could not delete coupon");
+    } finally {
+      setDeleting(false);
     }
   };
 
@@ -543,7 +591,7 @@ export default function OffersPage() {
 
       <div className="grid gap-4 xl:grid-cols-[minmax(0,1.05fr)_minmax(0,0.95fr)]">
         {/* Composer */}
-        <section className="overflow-hidden rounded-2xl border border-border/80 bg-card shadow-sm">
+        <section ref={composerRef} className="overflow-hidden rounded-2xl border border-border/80 bg-card shadow-sm">
           <div className="flex items-center gap-3 border-b border-border/70 bg-gradient-to-r from-primary/10 via-transparent to-transparent px-4 py-3.5 sm:px-5">
             <span className="inline-flex h-9 w-9 items-center justify-center rounded-xl bg-primary text-primary-foreground shadow-sm">
               <Megaphone className="h-4 w-4" />
@@ -1057,6 +1105,7 @@ export default function OffersPage() {
                   <th className="px-3 py-2.5 font-medium">Recipients</th>
                   <th className="px-3 py-2.5 font-medium">Updated</th>
                   <th className="px-4 py-2.5 font-medium sm:px-5">Status</th>
+                  <th className="px-4 py-2.5 text-right font-medium sm:px-5">Actions</th>
                 </tr>
               </thead>
               <tbody>
@@ -1085,6 +1134,35 @@ export default function OffersPage() {
                         {o.status === "SENT" ? "Sent" : "Saved"}
                       </Badge>
                     </td>
+                    <td className="px-4 py-3 sm:px-5">
+                      <div className="flex justify-end gap-1">
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="icon"
+                          title={`Edit ${o.name}`}
+                          aria-label={`Edit ${o.name}`}
+                          onClick={() => {
+                            loadOffer(o.id);
+                            composerRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
+                          }}
+                        >
+                          <Pencil className="size-4" />
+                        </Button>
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="icon"
+                          title={`Delete ${o.name}`}
+                          aria-label={`Delete ${o.name}`}
+                          className="text-muted-foreground hover:text-destructive"
+                          disabled={deleting}
+                          onClick={() => setDeleteTarget(o)}
+                        >
+                          <Trash2 className="size-4" />
+                        </Button>
+                      </div>
+                    </td>
                   </tr>
                 ))}
               </tbody>
@@ -1092,6 +1170,22 @@ export default function OffersPage() {
           </div>
         )}
       </section>
+      <Dialog open={Boolean(deleteTarget)} onOpenChange={(open) => { if (!open && !deleting) setDeleteTarget(null); }}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Delete coupon?</DialogTitle>
+            <DialogDescription>
+              {deleteTarget?.name} ({deleteTarget?.code}) will be removed from saved coupons and can no longer be redeemed.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button type="button" variant="outline" disabled={deleting} onClick={() => setDeleteTarget(null)}>Cancel</Button>
+            <Button type="button" variant="destructive" disabled={deleting} onClick={() => void deleteCoupon()}>
+              <Trash2 className="mr-2 size-4" />{deleting ? "Deleting…" : "Delete coupon"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
