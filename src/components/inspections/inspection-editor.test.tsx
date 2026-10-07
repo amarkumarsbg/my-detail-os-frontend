@@ -62,7 +62,7 @@ describe("inspection workflow", () => {
     mocks.get.mockResolvedValue({ item: report });
     render(<InspectionEditor id="i1" />);
     fireEvent.click(await screen.findByRole("button", { name: "PDF" }));
-    await waitFor(() => expect(mocks.downloadPdf).toHaveBeenCalledWith(report, expect.objectContaining({ name: "Studio" })));
+    await waitFor(() => expect(mocks.downloadPdf).toHaveBeenCalledWith(expect.objectContaining(report), expect.objectContaining({ name: "Studio" })));
     expect(mocks.downloadPdfFromUrl).not.toHaveBeenCalled();
   });
 
@@ -81,6 +81,52 @@ describe("inspection workflow", () => {
     fireEvent.click(screen.getByRole("button", { name: "Confirm" }));
     expect(screen.queryByRole("group", { name: "New checkpoint condition" })).not.toBeInTheDocument();
     await waitFor(() => expect(mocks.templates).toHaveBeenCalled());
+  });
+
+  it("saves pre-drive condition and relative vehicle pins through the inspection API", async () => {
+    mocks.save.mockImplementation(async (payload: InspectionReport) => ({ item: { ...payload, id: "i-condition", reportNumber: "INSP-CONDITION" } }));
+    render(<InspectionEditor />);
+    fireEvent.click(screen.getByRole("button", { name: "Fair" }));
+    fireEvent.click(screen.getByRole("button", { name: "Dent" }));
+    const blueprint = screen.getByRole("group", { name: "Vehicle blueprint" });
+    vi.spyOn(blueprint, "getBoundingClientRect").mockReturnValue({ left: 100, top: 100, width: 400, height: 200, right: 500, bottom: 300, x: 100, y: 100, toJSON: () => ({}) });
+    fireEvent.click(blueprint, { clientX: 300, clientY: 200 });
+    fireEvent.change(screen.getByRole("combobox", { name: "Customer" }), { target: { value: "c1" } });
+    await screen.findByRole("option", { name: "KA01AB1234 · Honda City" });
+    const vehicle = screen.getAllByRole("combobox").find((select) => select.querySelector('option[value="v1"]'))!;
+    fireEvent.change(vehicle, { target: { value: "v1" } });
+    fireEvent.click(screen.getByRole("button", { name: "Save Draft" }));
+
+    await waitFor(() => expect(mocks.save).toHaveBeenCalledWith(expect.objectContaining({
+      overallPreDriveCondition: "FAIR",
+      vehicleConditions: [expect.objectContaining({ number: 1, type: "DENT", x: 50, y: 50, area: "Roof / Windshield" })],
+    })));
+  });
+
+  it("restores the overall condition, pin number, type, and relative position from an inspection", async () => {
+    const pin = { id: "saved-pin", number: 3, type: "PAINT_CHIP" as const, x: 62.5, y: 48.2, area: "Roof / Windshield" };
+    mocks.get.mockResolvedValue({ item: { ...finalReport(), overallPreDriveCondition: "POOR", vehicleConditions: [pin] } });
+    render(<InspectionEditor id="i1" />);
+
+    expect(await screen.findByRole("heading", { name: "Vehicle Condition (1)" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Poor" })).toHaveAttribute("aria-pressed", "true");
+    expect(screen.getByRole("button", { name: "Condition 3: Paint Chip at Roof / Windshield" })).toHaveStyle({ left: "62.5%", top: "48.2%" });
+  });
+
+  it("confirms clearing pins and keeps the overall condition selected", async () => {
+    const pin = { id: "saved-pin", number: 1, type: "SCRATCH" as const, x: 50, y: 50, area: "Roof / Windshield" };
+    const draft = { ...finalReport(), status: "DRAFT" as const, overallPreDriveCondition: "FAIR" as const, vehicleConditions: [pin] };
+    mocks.get.mockResolvedValue({ item: draft });
+    mocks.save.mockImplementation(async (payload: InspectionReport) => ({ item: payload }));
+    render(<InspectionEditor id="i1" />);
+
+    fireEvent.click(await screen.findByRole("button", { name: "Clear All" }));
+    expect(screen.getByRole("dialog")).toHaveTextContent("Clear all vehicle conditions");
+    fireEvent.click(screen.getByRole("button", { name: "Confirm" }));
+    expect(await screen.findByRole("heading", { name: "Vehicle Condition (0)" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Fair" })).toHaveAttribute("aria-pressed", "true");
+    fireEvent.click(screen.getByRole("button", { name: "Save Draft" }));
+    await waitFor(() => expect(mocks.save).toHaveBeenCalledWith(expect.objectContaining({ overallPreDriveCondition: "FAIR", vehicleConditions: [] })));
   });
 
   it("retains the draft and shows a failed API save instead of fake success", async () => {
@@ -106,7 +152,7 @@ describe("inspection workflow", () => {
     fireEvent.click(await screen.findByRole("button", { name: "Finalize Inspection" }));
     fireEvent.click(screen.getByRole("button", { name: "Confirm" }));
     await screen.findByRole("alert");
-    expect(mocks.finalize).toHaveBeenCalledWith(draft);
+    expect(mocks.finalize).toHaveBeenCalledWith(expect.objectContaining({ ...draft, overallPreDriveCondition: null, vehicleConditions: [] }));
     expect(mocks.get).toHaveBeenCalledWith("i1");
     expect(mocks.success).not.toHaveBeenCalledWith("Inspection finalized");
     expect(mocks.error).toHaveBeenCalledWith(expect.stringContaining("still reports it as a draft"));
@@ -124,7 +170,7 @@ describe("inspection workflow", () => {
     fireEvent.click(revise);
     fireEvent.click(screen.getByRole("button", { name: "Confirm" }));
     await screen.findByRole("button", { name: "Save Draft" });
-    expect(mocks.revise).toHaveBeenCalledWith(report);
+    expect(mocks.revise).toHaveBeenCalledWith(expect.objectContaining({ ...report, overallPreDriveCondition: null, vehicleConditions: [] }));
     expect(mocks.replace).toHaveBeenCalledWith("/studio/inspections/i1");
   });
 

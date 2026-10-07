@@ -16,7 +16,11 @@ export const inspectionApi = {
   save: (report: InspectionReport) => report.id
     ? apiPut<{ item: InspectionReport }>(`/api/inspections/${encodeURIComponent(report.id)}`, report)
     : apiPost<{ item: InspectionReport }>("/api/inspections", report),
-  finalize: (report: InspectionReport) => apiPost<{ item: InspectionReport }>(`/api/inspections/${encodeURIComponent(report.id)}/finalize`, { revision: report.revision }),
+  finalize: (report: InspectionReport) => apiPost<{ item: InspectionReport }>(`/api/inspections/${encodeURIComponent(report.id)}/finalize`, {
+    revision: report.revision,
+    overallPreDriveCondition: report.overallPreDriveCondition ?? null,
+    vehicleConditions: report.vehicleConditions ?? [],
+  }),
   revise: (report: InspectionReport) => apiPost<{ item: InspectionReport }>(`/api/inspections/${encodeURIComponent(report.id)}/revisions`, { revision: report.revision }),
   send: (report: InspectionReport, channel: "WHATSAPP" | "EMAIL", recipient: string, requestId: string) => {
     if (!Number.isInteger(report.revision) || report.revision < 1) throw new Error("A valid report revision is required before sending.");

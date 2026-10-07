@@ -28,11 +28,20 @@ import { resolveUploadsPublicUrl } from "@/lib/api-base";
 import { createInspectionSections, DEFAULT_INSPECTION_TERMS, inspectionProgress, inspectionRating, resetInspectionSections, validateInspection } from "@/lib/inspection";
 import { inspectionApi, inspectionApiError } from "@/lib/inspection-api";
 import { downloadInspectionPdf } from "@/lib/inspection-pdf";
-import type { InspectionPhoto, InspectionReport, InspectionTemplate } from "@/types/inspection";
+import type { InspectionPhoto, InspectionPreDriveCondition, InspectionReport, InspectionTemplate, VehicleConditionPin } from "@/types/inspection";
 import type { Vehicle } from "@/types";
 import { InspectionChecklist, RatingBadge } from "./inspection-checklist";
+import { VehicleConditionSection } from "./vehicle-condition-section";
 
 type Confirmation = { title: string; description: string; action: () => void | Promise<void> };
+
+function withVehicleConditionDefaults(report: InspectionReport): InspectionReport {
+  return {
+    ...report,
+    overallPreDriveCondition: report.overallPreDriveCondition ?? null,
+    vehicleConditions: report.vehicleConditions ?? [],
+  };
+}
 
 export function InspectionEditor({ id }: { id?: string }) {
   const router = useRouter();
@@ -48,7 +57,7 @@ export function InspectionEditor({ id }: { id?: string }) {
     id: "", reportNumber: "", revision: 0, status: "DRAFT", branchId: selectedBranchId ?? user?.branchId ?? "",
     customerId: "", customerName: "", customerPhone: "", customerEmail: "", vehicleId: "", vehicleRegistration: "", vehicleMakeModel: "",
     inspectedAt: new Date().toLocaleDateString("en-CA"), inspectorName: user?.name ?? "", sections: createInspectionSections(), photos: [],
-    notes: "", terms: DEFAULT_INSPECTION_TERMS, overrideReason: "", createdAt: "", updatedAt: "",
+    notes: "", terms: DEFAULT_INSPECTION_TERMS, overrideReason: "", overallPreDriveCondition: null, vehicleConditions: [], createdAt: "", updatedAt: "",
   }));
   const [loading, setLoading] = useState(Boolean(id));
   const [error, setError] = useState("");
@@ -104,7 +113,7 @@ export function InspectionEditor({ id }: { id?: string }) {
       setLoading(true); setError("");
       try {
         const result = await inspectionApi.get(id!);
-        if (active) { setReport(result.item); setDirty(false); }
+        if (active) { setReport(withVehicleConditionDefaults(result.item)); setDirty(false); }
       } catch (failure) { if (active) setError(inspectionApiError(failure)); }
       finally { if (active) setLoading(false); }
     }
@@ -138,12 +147,26 @@ export function InspectionEditor({ id }: { id?: string }) {
     setBusy(final ? "finalize" : "save"); setError("");
     try {
       const saved = await inspectionApi.save(report);
-      setReport(saved.item); setDirty(false);
+      const savedReport = withVehicleConditionDefaults({
+        ...report,
+        ...saved.item,
+        overallPreDriveCondition: saved.item.overallPreDriveCondition ?? report.overallPreDriveCondition ?? null,
+        vehicleConditions: saved.item.vehicleConditions ?? report.vehicleConditions ?? [],
+      });
+      setReport(savedReport); setDirty(false);
       if (final) {
-        const finalized = await inspectionApi.finalize(saved.item);
-        let finalReport = finalized.item;
+        const finalized = await inspectionApi.finalize(savedReport);
+        let finalReport = withVehicleConditionDefaults({
+          ...savedReport,
+          ...finalized.item,
+          overallPreDriveCondition: finalized.item.overallPreDriveCondition ?? savedReport.overallPreDriveCondition ?? null,
+          vehicleConditions: finalized.item.vehicleConditions ?? savedReport.vehicleConditions ?? [],
+        });
         if (finalReport.status !== "FINAL") {
-          finalReport = (await inspectionApi.get(saved.item.id)).item;
+          finalReport = withVehicleConditionDefaults({
+            ...savedReport,
+            ...(await inspectionApi.get(savedReport.id)).item,
+          });
         }
         if (finalReport.status !== "FINAL") {
           throw new Error("The inspection API saved the report but still reports it as a draft. Finalization was not confirmed.");
@@ -175,6 +198,11 @@ export function InspectionEditor({ id }: { id?: string }) {
       const remaining = new Set(sections.flatMap((section) => section.checkpoints.map((checkpoint) => checkpoint.id)));
       patch({ sections, photos: report.photos.map((photo) => photo.checkpointId && !remaining.has(photo.checkpointId) ? { ...photo, checkpointId: undefined } : photo) });
     },
+  });
+  const clearVehicleConditions = () => setConfirmation({
+    title: "Clear all vehicle conditions?",
+    description: "All condition pins will be removed from this inspection draft.",
+    action: () => patch({ vehicleConditions: [] }),
   });
   const uploadPhotos = async (files: File[]) => {
     if (!report.branchId) { toast.error("Select a branch before uploading photos."); return; }
@@ -224,6 +252,14 @@ export function InspectionEditor({ id }: { id?: string }) {
         <div className="space-y-2"><Label>Overall rating</Label><Select value={report.overallOverride || "AUTO"} disabled={!editable} onValueChange={(value) => patch({ overallOverride: value === "AUTO" ? undefined : value as InspectionReport["overallOverride"], overrideReason: value === "AUTO" ? "" : report.overrideReason })}><SelectTrigger aria-label="Overall rating override"><SelectValue /></SelectTrigger><SelectContent><SelectItem value="AUTO">Calculated from checklist</SelectItem><SelectItem value="GOOD">Good</SelectItem><SelectItem value="AVERAGE">Average</SelectItem><SelectItem value="BAD">Bad</SelectItem></SelectContent></Select></div>
         {report.overallOverride && <div className="space-y-2"><Label htmlFor="inspection-override">Override reason</Label><Input id="inspection-override" value={report.overrideReason} onChange={(event) => patch({ overrideReason: event.target.value })} required /></div>}
       </fieldset>
+      <VehicleConditionSection
+        overallCondition={report.overallPreDriveCondition}
+        conditions={report.vehicleConditions ?? []}
+        editable={editable}
+        onOverallConditionChange={(overallPreDriveCondition: InspectionPreDriveCondition) => patch({ overallPreDriveCondition })}
+        onConditionsChange={(vehicleConditions: VehicleConditionPin[]) => patch({ vehicleConditions })}
+        onClearAll={clearVehicleConditions}
+      />
       <section className="space-y-4">
         <div className="flex flex-wrap items-center justify-between gap-3"><h2 className="text-base font-semibold">Component Checklists</h2>{editable && <div className="flex flex-wrap gap-2"><Select value={templateId} onValueChange={setTemplateId}><SelectTrigger className="w-44" aria-label="Inspection template"><SelectValue /></SelectTrigger><SelectContent><SelectItem value="default">Default template</SelectItem>{templates.map((template) => <SelectItem key={template.id} value={template.id}>{template.name}</SelectItem>)}</SelectContent></Select><Button variant="outline" onClick={() => setConfirmation({ title: "Replace checklist with template?", description: "Current ratings, readings, remarks and photo checkpoint links will be cleared.", action: () => { const template = templates.find((item) => item.id === templateId); patch({ sections: template ? resetInspectionSections(template.sections) : createInspectionSections(), terms: template?.terms ?? DEFAULT_INSPECTION_TERMS, photos: report.photos.map((photo) => ({ ...photo, checkpointId: undefined })) }); } })}><RefreshCw className="mr-2 h-4 w-4" />Load Template</Button>{userCanEdit(user, "SETTINGS") && <Button variant="outline" onClick={() => setTemplateDialog(true)}><Save className="mr-2 h-4 w-4" />Save Template</Button>}</div>}</div>
         <InspectionChecklist sections={report.sections} editable={editable} onChange={(sections) => patch({ sections })} onRemove={removeCheckpoint} />

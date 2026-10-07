@@ -23,6 +23,19 @@ export interface InspectionPhoto {
   checkpointId?: string;
 }
 
+export type InspectionPreDriveCondition = "GOOD" | "FAIR" | "POOR";
+export type VehicleConditionType = "SCRATCH" | "DENT" | "CRACK" | "PAINT_CHIP" | "OTHER";
+
+export interface VehicleConditionPin {
+  id: string;
+  number: number;
+  type: VehicleConditionType;
+  x: number;
+  y: number;
+  area: string;
+  notes?: string;
+}
+
 export interface InspectionReport {
   id: string;
   reportNumber: string;
@@ -49,6 +62,8 @@ export interface InspectionReport {
   odometer?: number;
   sections: InspectionSection[];
   photos: InspectionPhoto[];
+  overallPreDriveCondition?: InspectionPreDriveCondition | null;
+  vehicleConditions?: VehicleConditionPin[];
   notes: string;
   terms: string;
   overallOverride?: Exclude<InspectionRating, "NA" | "NOT_CHECKED">;

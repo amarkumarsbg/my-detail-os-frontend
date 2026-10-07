@@ -1,16 +1,17 @@
 import { describe, expect, it, vi } from "vitest";
-import { downloadInspectionPdf } from "./inspection-pdf";
+import { buildVehicleConditionSvg, downloadInspectionPdf } from "./inspection-pdf";
 import { createInspectionSections, inspectionProgress, inspectionRating, resetInspectionSections, validateInspection } from "./inspection";
 import type { InspectionReport } from "@/types/inspection";
 
 vi.mock("./assert-can-export", () => ({ requireCanExportData: vi.fn() }));
-const pdfMocks = vi.hoisted(() => ({ save: vi.fn(), document: undefined as import("jspdf").jsPDF | undefined }));
+const pdfMocks = vi.hoisted(() => ({ save: vi.fn(), addImage: vi.fn(), document: undefined as import("jspdf").jsPDF | undefined }));
 vi.mock("jspdf", async (importOriginal) => {
   const original = await importOriginal<typeof import("jspdf")>();
   return { ...original, default: function InspectionPdf() {
     const pdf = new original.jsPDF();
     pdfMocks.document = pdf;
     pdf.save = pdfMocks.save;
+    pdf.addImage = pdfMocks.addImage;
     return pdf;
   } };
 });
@@ -57,9 +58,30 @@ describe("vehicle inspection", () => {
   it("generates a paginated diagnostic PDF with report identity, checklist and terms", async () => {
     const sections = createInspectionSections();
     sections.forEach((section) => section.checkpoints.forEach((checkpoint) => { checkpoint.rating = "GOOD"; checkpoint.remarks = "Inspected and checked"; }));
-    const report = { id: "i1", reportNumber: "INSP-2026-0001", revision: 1, status: "FINAL", customerName: "Amar", vehicleRegistration: "KA01AB1234", vehicleMakeModel: "Honda City", inspectorName: "Inspector", inspectedAt: "2026-10-05", sections, photos: [], notes: "Inspection complete", terms: "Customer approval required", overrideReason: "" } as InspectionReport;
+    const report = { id: "i1", reportNumber: "INSP-2026-0001", revision: 1, status: "FINAL", customerName: "Amar", vehicleRegistration: "KA01AB1234", vehicleMakeModel: "Honda City", inspectorName: "Inspector", inspectedAt: "2026-10-05", sections, photos: [], overallPreDriveCondition: "FAIR", vehicleConditions: [{ id: "pin-1", number: 1, type: "PAINT_CHIP", x: 58.2, y: 42.4, area: "Roof / Windshield", notes: "Small mark" }, { id: "pin-2", number: 2, type: "DENT", x: 82, y: 53, area: "Right Side" }], notes: "Inspection complete", terms: "Customer approval required", overrideReason: "" } as InspectionReport;
+    const conditionVisual = buildVehicleConditionSvg(report);
+    expect(conditionVisual.markup).toContain("Vehicle Condition (2)");
+    expect(conditionVisual.markup).toContain("Roof / Windshield");
+    expect(conditionVisual.markup).toContain("Small mark");
+    expect(conditionVisual.markup).toContain("#3b82f6");
+    vi.stubGlobal("Image", class {
+      width = 1200;
+      height = conditionVisual.height;
+      onload: (() => void) | null = null;
+      onerror: (() => void) | null = null;
+      set src(_value: string) { this.onload?.(); }
+    });
+    vi.stubGlobal("document", {
+      createElement: () => ({
+        width: 0,
+        height: 0,
+        getContext: () => ({ drawImage: vi.fn() }),
+        toDataURL: () => "data:image/png;base64,vehicle-condition",
+      }),
+    });
     await downloadInspectionPdf(report, { name: "Studio", address: "Main Road", phone: "9999999999", color: "#14B8A6" });
     expect(pdfMocks.save).toHaveBeenCalledWith("Inspection-INSP-2026-0001-r1.pdf");
+    expect(pdfMocks.addImage).toHaveBeenCalledWith("data:image/png;base64,vehicle-condition", "PNG", 14, expect.any(Number), 182, expect.any(Number));
     expect(pdfMocks.document?.getNumberOfPages()).toBeGreaterThan(1);
     const output = pdfMocks.document?.output();
     expect(output).toContain("INSP-2026-0001");

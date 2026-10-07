@@ -12,6 +12,7 @@ import { useAuthStore } from "@/store/auth-store";
 import { goToMarketingAfterLogout } from "@/lib/marketing-site";
 import { useDashboardFilterStore } from "@/store/dashboard-filter-store";
 import { useSettingsStore } from "@/store/settings-store";
+import { useOrganizationStore } from "@/store/organization-store";
 import { useAppointmentStore } from "@/store/appointment-store";
 import { resolveAppointmentKind } from "@/lib/appointment-ids";
 import { canAccessNavItem } from "@/lib/rbac";
@@ -341,6 +342,7 @@ export function Sidebar() {
   const { mobileOpen, setMobileOpen, collapsed, setCollapsed } = useSidebarStore();
   const businessName = useSettingsStore((s) => s.businessName);
   const businessLogo = useSettingsStore((s) => s.businessLogo);
+  const isTrialOrganization = useOrganizationStore((s) => s.entitlement?.subscription.status === "TRIAL");
   const user = useAuthStore((s) => s.user);
   const logout = useAuthStore((s) => s.logout);
   const companyLogoSrc = resolveUploadsPublicUrl(businessLogo);
@@ -352,7 +354,7 @@ export function Sidebar() {
     user?.permissions
   );
 
-  const demoCta = canRequestDemo ? (
+  const demoCta = canRequestDemo && isTrialOrganization ? (
     <button
       type="button"
       onClick={() => {
