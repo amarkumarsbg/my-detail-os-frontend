@@ -99,22 +99,22 @@ describe("inspection workflow", () => {
 
     await waitFor(() => expect(mocks.save).toHaveBeenCalledWith(expect.objectContaining({
       overallPreDriveCondition: "FAIR",
-      vehicleConditions: [expect.objectContaining({ number: 1, type: "DENT", x: 50, y: 50, area: "Roof / Windshield" })],
+      vehicleConditions: [expect.objectContaining({ number: 1, type: "DENT", x: 50, y: 50, location: "SUNROOF", area: "Sunroof" })],
     })));
   });
 
   it("restores the overall condition, pin number, type, and relative position from an inspection", async () => {
-    const pin = { id: "saved-pin", number: 3, type: "PAINT_CHIP" as const, x: 62.5, y: 48.2, area: "Roof / Windshield" };
+    const pin = { id: "saved-pin", number: 3, type: "PAINT_CHIP" as const, x: 62.5, y: 48.2, location: "PASSENGER_GATE" as const, area: "Passenger Gate" };
     mocks.get.mockResolvedValue({ item: { ...finalReport(), overallPreDriveCondition: "POOR", vehicleConditions: [pin] } });
     render(<InspectionEditor id="i1" />);
 
     expect(await screen.findByRole("heading", { name: "Vehicle Condition (1)" })).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Poor" })).toHaveAttribute("aria-pressed", "true");
-    expect(screen.getByRole("button", { name: "Condition 3: Paint Chip at Roof / Windshield" })).toHaveStyle({ left: "62.5%", top: "48.2%" });
+    expect(screen.getByRole("button", { name: "Condition 3: Paint Chip at Passenger Gate" })).toHaveStyle({ left: "62.5%", top: "48.2%" });
   });
 
   it("confirms clearing pins and keeps the overall condition selected", async () => {
-    const pin = { id: "saved-pin", number: 1, type: "SCRATCH" as const, x: 50, y: 50, area: "Roof / Windshield" };
+    const pin = { id: "saved-pin", number: 1, type: "SCRATCH" as const, x: 50, y: 54.3, location: "SUNROOF" as const, area: "Sunroof" };
     const draft = { ...finalReport(), status: "DRAFT" as const, overallPreDriveCondition: "FAIR" as const, vehicleConditions: [pin] };
     mocks.get.mockResolvedValue({ item: draft });
     mocks.save.mockImplementation(async (payload: InspectionReport) => ({ item: payload }));

@@ -17,7 +17,7 @@ describe("inspection API condition payloads", () => {
       id: "inspection-1",
       revision: 4,
       overallPreDriveCondition: "FAIR",
-      vehicleConditions: [{ id: "pin-2", number: 2, type: "DENT", x: 47.5, y: 62.3, area: "Rear Left" }],
+      vehicleConditions: [{ id: "pin-2", number: 2, type: "DENT", x: 47.5, y: 62.3, location: "SUNROOF", area: "Sunroof" }],
     } as InspectionReport;
     mocks.apiPost.mockResolvedValue({ item: report });
 

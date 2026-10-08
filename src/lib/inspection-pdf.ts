@@ -6,6 +6,7 @@ import { normalizeHex, DEFAULT_BRAND_PRIMARY } from "./brand-color";
 import { resolveUploadsPublicUrl } from "./api-base";
 import { requireCanExportData } from "./assert-can-export";
 import { apiGetBlob } from "./api-client";
+import { buildVehicleConditionBlueprintMarkup, normalizeVehicleConditionLocation, vehicleConditionLocationLabels } from "./vehicle-condition-geometry";
 
 type InspectionPdfBrand = { name: string; address: string; phone: string; color: string };
 
@@ -32,7 +33,8 @@ export function buildVehicleConditionSvg(report: InspectionReport): { markup: st
   const rows = conditions.map((condition, index) => {
     const colors = vehicleConditionColors[condition.type];
     const label = vehicleConditionLabels[condition.type];
-    const area = escapeSvg(condition.area || "Unspecified area");
+    const location = normalizeVehicleConditionLocation(condition.location, condition.x, condition.y);
+    const area = escapeSvg(vehicleConditionLocationLabels[location]);
     const notes = condition.notes?.trim();
     const rowHeight = notes ? 58 : 46;
     const y = rowTop;
@@ -73,7 +75,6 @@ export function buildVehicleConditionSvg(report: InspectionReport): { markup: st
     markup: `<svg xmlns="http://www.w3.org/2000/svg" width="${width}" height="${height}" viewBox="0 0 ${width} ${height}">
       <defs>
         <pattern id="grid" width="28" height="28" patternUnits="userSpaceOnUse"><path d="M 28 0 L 0 0 0 28" fill="none" stroke="#253147" stroke-width="1"/></pattern>
-        <linearGradient id="body" x1="0" x2="1" y1="0" y2="1"><stop offset="0" stop-color="#1d2b42"/><stop offset="1" stop-color="#121e32"/></linearGradient>
       </defs>
       <rect width="${width}" height="${height}" fill="#ffffff"/>
       <rect x="0" y="0" width="${width}" height="3" fill="#e8d7c0"/>
@@ -89,16 +90,8 @@ export function buildVehicleConditionSvg(report: InspectionReport): { markup: st
       ${typeLegend}
       <rect x="20" y="${mainTop}" width="760" height="${mainHeight}" rx="18" fill="#101a2e" stroke="#26354d" stroke-width="2"/>
       <rect x="20" y="${mainTop}" width="760" height="${mainHeight}" rx="18" fill="url(#grid)"/>
-      <g transform="translate(100 ${mainTop + (mainHeight - 405) / 2})" font-family="Arial,sans-serif" text-anchor="middle">
-        <g fill="#8da0b8" font-size="12"><text x="300" y="32">Front (Hood)</text><text x="300" y="386">Rear (Trunk)</text><text x="95" y="208">Left Side</text><text x="505" y="208">Right Side</text></g>
-        <g fill="url(#body)" stroke="#22b9ee" stroke-width="3" stroke-linejoin="round">
-          <path d="M244 69 Q260 53 300 52 Q340 53 356 69 L375 98 Q386 119 390 155 L397 245 Q398 300 375 327 L356 347 Q340 359 300 360 Q260 359 244 347 L225 327 Q202 300 203 245 L210 155 Q214 119 225 98 Z"/>
-          <path d="M232 103 Q300 78 368 103 L360 138 Q300 126 240 138 Z" fill="#102a42"/><path d="M239 151 Q300 138 361 151 L369 182 L231 182 Z" fill="#18334a"/>
-          <path d="M235 191 Q300 186 365 191 L359 267 Q300 276 241 267 Z" fill="#0b1728"/><path d="M241 278 Q300 287 359 278 L368 316 Q300 338 232 316 Z" fill="#18334a"/>
-          <path d="M220 151 L207 165 L211 177 L225 171 M380 151 L393 165 L389 177 L375 171" fill="#34516c"/>
-        </g>
-        <g fill="none" stroke="#22b9ee" stroke-width="2"><path d="M228 145 L372 145 M229 274 L371 274 M249 105 L258 139 M351 105 L342 139 M248 281 L257 316 M352 281 L343 316"/></g>
-        <g fill="none" stroke="#f04452" stroke-width="2.5" stroke-linecap="round"><path d="M231 324 L257 333 M369 324 L343 333"/></g>
+      <g transform="translate(100 ${mainTop + (mainHeight - 405) / 2})">
+        ${buildVehicleConditionBlueprintMarkup()}
       </g>
       ${pinSvg}
       <rect x="800" y="${sideY}" width="380" height="${mainHeight}" rx="12" fill="#ffffff" stroke="#eadcc9" stroke-width="2"/>

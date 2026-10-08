@@ -58,10 +58,11 @@ describe("vehicle inspection", () => {
   it("generates a paginated diagnostic PDF with report identity, checklist and terms", async () => {
     const sections = createInspectionSections();
     sections.forEach((section) => section.checkpoints.forEach((checkpoint) => { checkpoint.rating = "GOOD"; checkpoint.remarks = "Inspected and checked"; }));
-    const report = { id: "i1", reportNumber: "INSP-2026-0001", revision: 1, status: "FINAL", customerName: "Amar", vehicleRegistration: "KA01AB1234", vehicleMakeModel: "Honda City", inspectorName: "Inspector", inspectedAt: "2026-10-05", sections, photos: [], overallPreDriveCondition: "FAIR", vehicleConditions: [{ id: "pin-1", number: 1, type: "PAINT_CHIP", x: 58.2, y: 42.4, area: "Roof / Windshield", notes: "Small mark" }, { id: "pin-2", number: 2, type: "DENT", x: 82, y: 53, area: "Right Side" }], notes: "Inspection complete", terms: "Customer approval required", overrideReason: "" } as InspectionReport;
+    const report = { id: "i1", reportNumber: "INSP-2026-0001", revision: 1, status: "FINAL", customerName: "Amar", vehicleRegistration: "KA01AB1234", vehicleMakeModel: "Honda City", inspectorName: "Inspector", inspectedAt: "2026-10-05", sections, photos: [], overallPreDriveCondition: "FAIR", vehicleConditions: [{ id: "pin-1", number: 1, type: "PAINT_CHIP", x: 58.2, y: 42.4, area: "Legacy area", notes: "Small mark" }, { id: "pin-2", number: 2, type: "DENT", x: 82, y: 53, area: "Right Side" }], notes: "Inspection complete", terms: "Customer approval required", overrideReason: "" } as InspectionReport;
     const conditionVisual = buildVehicleConditionSvg(report);
     expect(conditionVisual.markup).toContain("Vehicle Condition (2)");
-    expect(conditionVisual.markup).toContain("Roof / Windshield");
+    expect(conditionVisual.markup).toContain("Windshield");
+    expect(conditionVisual.markup).not.toContain("Legacy area");
     expect(conditionVisual.markup).toContain("Small mark");
     expect(conditionVisual.markup).toContain("#3b82f6");
     vi.stubGlobal("Image", class {

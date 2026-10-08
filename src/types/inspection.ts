@@ -25,6 +25,22 @@ export interface InspectionPhoto {
 
 export type InspectionPreDriveCondition = "GOOD" | "FAIR" | "POOR";
 export type VehicleConditionType = "SCRATCH" | "DENT" | "CRACK" | "PAINT_CHIP" | "OTHER";
+export type VehicleConditionLocation =
+  | "FRONT_BUMPER"
+  | "REAR_BUMPER"
+  | "HOOD"
+  | "TRUNK"
+  | "LEFT_FENDER"
+  | "RIGHT_FENDER"
+  | "DRIVER_GATE"
+  | "PASSENGER_GATE"
+  | "LEFT_REAR_PASSENGER_GATE"
+  | "RIGHT_REAR_PASSENGER_GATE"
+  | "SUNROOF"
+  | "WINDSHIELD"
+  | "WINDOWS"
+  | "LEFT_QUARTER_PANEL"
+  | "RIGHT_QUARTER_PANEL";
 
 export interface VehicleConditionPin {
   id: string;
@@ -32,6 +48,9 @@ export interface VehicleConditionPin {
   type: VehicleConditionType;
   x: number;
   y: number;
+  /** Stable location key; optional for previously saved pins. */
+  location?: VehicleConditionLocation;
+  /** Human-readable compatibility label for older API clients. */
   area: string;
   notes?: string;
 }
