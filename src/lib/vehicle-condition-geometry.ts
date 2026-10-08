@@ -140,7 +140,7 @@ export function vehicleConditionArea(xPercent: number, yPercent: number): string
   return vehicleConditionLocationLabels[vehicleConditionLocation(xPercent, yPercent)];
 }
 
-/** Shared blueprint markup for PDF — matches the on-screen sedan panel map. */
+/** Shared blueprint markup for PDF — matches the on-screen sedan panel map (600×405). */
 export function buildVehicleConditionBlueprintMarkup(highlight?: VehicleConditionLocation | null): string {
   const panels = vehicleConditionRegions.map((region) => {
     const active = highlight === region.location;
@@ -152,13 +152,21 @@ export function buildVehicleConditionBlueprintMarkup(highlight?: VehicleConditio
   }).join("");
 
   return `
+    <defs>
+      <pattern id="vehicle-condition-pdf-grid" width="28" height="28" patternUnits="userSpaceOnUse">
+        <path d="M 28 0 L 0 0 0 28" fill="none" stroke="#27344a" stroke-width="1"/>
+      </pattern>
+      <clipPath id="vehicle-condition-pdf-body-clip"><path d="${vehicleConditionBodyPath}"/></clipPath>
+    </defs>
+    <rect width="600" height="405" fill="#101a2e"/>
+    <rect width="600" height="405" fill="url(#vehicle-condition-pdf-grid)"/>
     <g fill="#8da0b8" font-family="Arial, sans-serif" font-size="12" text-anchor="middle">
       <text x="300" y="30">▲ Front (Hood)</text>
       <text x="300" y="384">▼ Rear (Trunk)</text>
       <text x="86" y="214">◀ Left</text>
       <text x="514" y="214">Right ▶</text>
     </g>
-    <g>${panels}</g>
+    <g clip-path="url(#vehicle-condition-pdf-body-clip)" stroke-linejoin="round">${panels}</g>
     <path d="${vehicleConditionBodyPath}" fill="none" stroke="#22b9ee" stroke-width="2.8" stroke-linejoin="round"/>
     <g fill="#1c334c" stroke="#22b9ee" stroke-width="1.4" stroke-linejoin="round">
       <path d="M214 148 L198 160 L202 174 L218 166 Z"/>

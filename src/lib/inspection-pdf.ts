@@ -3,9 +3,9 @@ import autoTable from "jspdf-autotable";
 import type { InspectionRating, InspectionReport } from "@/types/inspection";
 import { inspectionRating, INSPECTION_RATING_LABELS } from "./inspection";
 import { normalizeHex, DEFAULT_BRAND_PRIMARY } from "./brand-color";
-import { resolveUploadsPublicUrl } from "./api-base";
 import { requireCanExportData } from "./assert-can-export";
 import { apiGetBlob } from "./api-client";
+import { loadInspectionPhotoBlob } from "./inspection-media";
 import { buildVehicleConditionBlueprintMarkup, normalizeVehicleConditionLocation, vehicleConditionLocationLabels } from "./vehicle-condition-geometry";
 
 type InspectionPdfBrand = { name: string; address: string; phone: string; color: string };
@@ -27,45 +27,73 @@ function escapeSvg(value: string): string {
 export function buildVehicleConditionSvg(report: InspectionReport): { markup: string; width: number; height: number } {
   const conditions = report.vehicleConditions ?? [];
   const width = 1200;
-  const mainTop = 194;
+  const overallTop = 82;
+  const overallHeight = 72;
+  const legendTop = overallTop + overallHeight + 14;
+  const legendHeight = 56;
+  const mainTop = legendTop + legendHeight + 16;
   const sideY = mainTop;
-  let rowTop = sideY + 64;
+  const listHeaderHeight = 52;
+  const listPadX = 18;
+  const listContentLeft = 800 + listPadX;
+  const numberCx = listContentLeft + 14;
+  const contentX = numberCx + 28;
+  let rowTop = sideY + listHeaderHeight;
+  const chipWidths = { "Paint Chip": 96, Scratch: 74, Dent: 62, Crack: 62, Other: 62 } as const;
   const rows = conditions.map((condition, index) => {
     const colors = vehicleConditionColors[condition.type];
     const label = vehicleConditionLabels[condition.type];
     const location = normalizeVehicleConditionLocation(condition.location, condition.x, condition.y);
     const area = escapeSvg(vehicleConditionLocationLabels[location]);
     const notes = condition.notes?.trim();
-    const rowHeight = notes ? 58 : 46;
+    const chipWidth = chipWidths[label];
+    const rowHeight = notes ? 86 : 70;
     const y = rowTop;
+    const chipY = y + 12;
+    const areaY = chipY + 40;
+    const notesY = areaY + 18;
+    const centerY = notes ? y + rowHeight / 2 - 4 : y + 35;
     rowTop += rowHeight;
     return `<g>
-      ${index ? `<path d="M 818 ${y - 10} H 1160" stroke="#e7ddd0" stroke-width="1.5"/>` : ""}
-      <circle cx="842" cy="${y + 9}" r="16" fill="${colors.pin}"/>
-      <text x="842" y="${y + 15}" text-anchor="middle" font-family="Arial,sans-serif" font-size="16" font-weight="700" fill="#ffffff">${condition.number}</text>
-      <rect x="870" y="${y - 8}" width="${label === "Paint Chip" ? 112 : label === "Scratch" ? 86 : 72}" height="30" rx="15" fill="${colors.fill}" stroke="${colors.border}" stroke-width="2"/>
-      <text x="${label === "Paint Chip" ? 926 : label === "Scratch" ? 913 : 906}" y="${y + 12}" text-anchor="middle" font-family="Arial,sans-serif" font-size="15" fill="${colors.ink}">${label}</text>
-      <text x="${label === "Paint Chip" ? 994 : label === "Scratch" ? 969 : 950}" y="${y + 5}" font-family="Arial,sans-serif" font-size="16" font-weight="600" fill="#111827">${area}</text>
-      ${notes ? `<text x="870" y="${y + 39}" font-family="Arial,sans-serif" font-size="13" fill="#64748b">${escapeSvg(notes)}</text>` : ""}
+      ${index ? `<path d="M ${800 + 12} ${y} H ${1180 - 12}" stroke="#e5e7eb" stroke-width="1.5"/>` : ""}
+      <circle cx="${numberCx}" cy="${centerY}" r="13" fill="${colors.pin}"/>
+      <text x="${numberCx}" y="${centerY + 5}" text-anchor="middle" font-family="Arial,sans-serif" font-size="13" font-weight="700" fill="#ffffff">${condition.number}</text>
+      <rect x="${contentX}" y="${chipY}" width="${chipWidth}" height="24" rx="12" fill="${colors.fill}" stroke="${colors.border}" stroke-width="1.5"/>
+      <text x="${contentX + chipWidth / 2}" y="${chipY + 16}" text-anchor="middle" font-family="Arial,sans-serif" font-size="12" font-weight="600" fill="${colors.ink}">${label}</text>
+      <text x="${contentX}" y="${areaY}" font-family="Arial,sans-serif" font-size="15" font-weight="600" fill="#111827">${area}</text>
+      ${notes ? `<text x="${contentX}" y="${notesY}" font-family="Arial,sans-serif" font-size="12" fill="#64748b">${escapeSvg(notes)}</text>` : ""}
     </g>`;
   });
-  const mainHeight = Math.max(430, rowTop - sideY + 18);
+  const mainHeight = Math.max(430, rowTop - sideY + 16);
   const height = mainTop + mainHeight + 20;
   const overallLabels = { GOOD: "Good", FAIR: "Fair", POOR: "Poor" } as const;
   const overall = report.overallPreDriveCondition ? overallLabels[report.overallPreDriveCondition] : "Not selected";
   const overallColor = overall === "Good" ? "#059669" : overall === "Fair" ? "#d97706" : overall === "Poor" ? "#dc2626" : "#64748b";
+  const chipY = legendTop + 10;
   const typeLegend = (Object.keys(vehicleConditionLabels) as Array<keyof typeof vehicleConditionLabels>).map((type, index) => {
     const label = vehicleConditionLabels[type];
     const x = 208 + index * 160;
     const colors = vehicleConditionColors[type];
-    return `<rect x="${x}" y="137" width="145" height="36" rx="9" fill="${colors.fill}" stroke="${colors.border}" stroke-width="2"/><circle cx="${x + 17}" cy="155" r="7" fill="${colors.pin}"/><text x="${x + 32}" y="160" font-family="Arial,sans-serif" font-size="15" font-weight="600" fill="${colors.ink}">${label}</text>`;
+    return `<rect x="${x}" y="${chipY}" width="145" height="36" rx="9" fill="${colors.fill}" stroke="${colors.border}" stroke-width="2"/><circle cx="${x + 17}" cy="${chipY + 18}" r="7" fill="${colors.pin}"/><text x="${x + 32}" y="${chipY + 23}" font-family="Arial,sans-serif" font-size="15" font-weight="600" fill="${colors.ink}">${label}</text>`;
   }).join("");
-  const pinSvg = conditions.map((condition, index) => {
-    const cx = 20 + 760 * condition.x / 100;
-    const cy = mainTop + mainHeight * condition.y / 100;
+  // Blueprint is 600×405 — scale it into the left panel and place pins in the same space as the UI.
+  const panelX = 20;
+  const panelW = 760;
+  const blueprintScale = Math.min(panelW / 600, mainHeight / 405);
+  const blueprintW = 600 * blueprintScale;
+  const blueprintH = 405 * blueprintScale;
+  const blueprintX = panelX + (panelW - blueprintW) / 2;
+  const blueprintY = mainTop + (mainHeight - blueprintH) / 2;
+  const pinRadius = Math.max(14, 16 * blueprintScale);
+  const pinSvg = conditions.map((condition) => {
+    const cx = blueprintX + blueprintW * condition.x / 100;
+    const cy = blueprintY + blueprintH * condition.y / 100;
     const colors = vehicleConditionColors[condition.type];
-    const active = index === conditions.length - 1;
-    return `<g><circle cx="${cx}" cy="${cy}" r="${active ? 29 : 24}" fill="${active ? "#60a5fa" : "#ffffff"}" opacity="${active ? "0.95" : "1"}"/><circle cx="${cx}" cy="${cy}" r="${active ? 22 : 19}" fill="${colors.pin}"/><text x="${cx}" y="${cy + 7}" text-anchor="middle" font-family="Arial,sans-serif" font-size="${active ? 18 : 16}" font-weight="700" fill="#ffffff">${condition.number}</text></g>`;
+    return `<g>
+      <circle cx="${cx}" cy="${cy}" r="${pinRadius + 2}" fill="#ffffff"/>
+      <circle cx="${cx}" cy="${cy}" r="${pinRadius}" fill="${colors.pin}"/>
+      <text x="${cx}" y="${cy + pinRadius * 0.38}" text-anchor="middle" font-family="Arial,sans-serif" font-size="${Math.max(11, 13 * blueprintScale)}" font-weight="700" fill="#ffffff">${condition.number}</text>
+    </g>`;
   }).join("");
   const emptyList = !conditions.length ? `<text x="980" y="${sideY + 118}" text-anchor="middle" font-family="Arial,sans-serif" font-size="18" fill="#64748b">No conditions noted</text>` : "";
 
@@ -74,31 +102,35 @@ export function buildVehicleConditionSvg(report: InspectionReport): { markup: st
     height,
     markup: `<svg xmlns="http://www.w3.org/2000/svg" width="${width}" height="${height}" viewBox="0 0 ${width} ${height}">
       <defs>
-        <pattern id="grid" width="28" height="28" patternUnits="userSpaceOnUse"><path d="M 28 0 L 0 0 0 28" fill="none" stroke="#253147" stroke-width="1"/></pattern>
+        <clipPath id="noted-panel"><rect x="800" y="${sideY}" width="380" height="${mainHeight}" rx="12"/></clipPath>
       </defs>
       <rect width="${width}" height="${height}" fill="#ffffff"/>
       <rect x="0" y="0" width="${width}" height="3" fill="#e8d7c0"/>
       <text x="24" y="38" font-family="Arial,sans-serif" font-size="24" font-weight="700" fill="#172033">Vehicle Condition (${conditions.length})</text>
       <text x="24" y="65" font-family="Arial,sans-serif" font-size="16" fill="#64748b">Record visible exterior condition before the inspection.</text>
-      <rect x="20" y="82" width="1160" height="82" rx="12" fill="#fbf9f6" stroke="#eadcc9" stroke-width="2"/>
-      <text x="42" y="116" font-family="Arial,sans-serif" font-size="18" font-weight="700" fill="#172033">Overall Pre-Drive Condition</text>
-      <text x="42" y="143" font-family="Arial,sans-serif" font-size="16" fill="#64748b">General visual condition of the vehicle exterior</text>
-      <rect x="1045" y="104" width="108" height="38" rx="10" fill="${overallColor}"/>
-      <text x="1099" y="129" text-anchor="middle" font-family="Arial,sans-serif" font-size="16" font-weight="700" fill="#ffffff">${overall}</text>
-      <rect x="20" y="178" width="1160" height="62" rx="12" fill="#f8f6f2" stroke="#eadcc9" stroke-width="2"/>
-      <text x="42" y="215" font-family="Arial,sans-serif" font-size="16" font-weight="700" fill="#172033">Condition types</text>
+      <rect x="20" y="${overallTop}" width="1160" height="${overallHeight}" rx="12" fill="#fbf9f6" stroke="#eadcc9" stroke-width="2"/>
+      <text x="42" y="${overallTop + 30}" font-family="Arial,sans-serif" font-size="18" font-weight="700" fill="#172033">Overall Pre-Drive Condition</text>
+      <text x="42" y="${overallTop + 54}" font-family="Arial,sans-serif" font-size="16" fill="#64748b">General visual condition of the vehicle exterior</text>
+      <rect x="1045" y="${overallTop + 17}" width="108" height="38" rx="10" fill="${overallColor}"/>
+      <text x="1099" y="${overallTop + 42}" text-anchor="middle" font-family="Arial,sans-serif" font-size="16" font-weight="700" fill="#ffffff">${overall}</text>
+      <rect x="20" y="${legendTop}" width="1160" height="${legendHeight}" rx="12" fill="#f8f6f2" stroke="#eadcc9" stroke-width="2"/>
+      <text x="42" y="${legendTop + 34}" font-family="Arial,sans-serif" font-size="16" font-weight="700" fill="#172033">Condition types</text>
       ${typeLegend}
-      <rect x="20" y="${mainTop}" width="760" height="${mainHeight}" rx="18" fill="#101a2e" stroke="#26354d" stroke-width="2"/>
-      <rect x="20" y="${mainTop}" width="760" height="${mainHeight}" rx="18" fill="url(#grid)"/>
-      <g transform="translate(100 ${mainTop + (mainHeight - 405) / 2})">
+      <rect x="${panelX}" y="${mainTop}" width="${panelW}" height="${mainHeight}" rx="18" fill="#101a2e" stroke="#26354d" stroke-width="2"/>
+      <g transform="translate(${blueprintX} ${blueprintY}) scale(${blueprintScale})">
         ${buildVehicleConditionBlueprintMarkup()}
       </g>
       ${pinSvg}
-      <rect x="800" y="${sideY}" width="380" height="${mainHeight}" rx="12" fill="#ffffff" stroke="#eadcc9" stroke-width="2"/>
-      <path d="M800 ${sideY + 52} H1180" stroke="#eadcc9" stroke-width="2"/>
-      <circle cx="827" cy="${sideY + 26}" r="10" fill="#fff7ed" stroke="#f59e0b" stroke-width="2"/>
-      <text x="846" y="${sideY + 32}" font-family="Arial,sans-serif" font-size="17" font-weight="700" fill="#172033">Noted conditions (${conditions.length})</text>
-      ${rows.join("")}${emptyList}
+      <g clip-path="url(#noted-panel)">
+        <rect x="800" y="${sideY}" width="380" height="${mainHeight}" fill="#ffffff"/>
+        <rect x="800" y="${sideY}" width="380" height="${listHeaderHeight}" fill="#f8fafc"/>
+        <path d="M800 ${sideY + listHeaderHeight} H1180" stroke="#e5e7eb" stroke-width="1.5"/>
+        <circle cx="${numberCx}" cy="${sideY + listHeaderHeight / 2}" r="10" fill="#f59e0b"/>
+        <text x="${numberCx}" y="${sideY + listHeaderHeight / 2 + 5}" text-anchor="middle" font-family="Arial,sans-serif" font-size="13" font-weight="700" fill="#ffffff">!</text>
+        <text x="${contentX}" y="${sideY + listHeaderHeight / 2 + 6}" font-family="Arial,sans-serif" font-size="16" font-weight="700" fill="#172033">Noted conditions (${conditions.length})</text>
+        ${rows.join("")}${emptyList}
+      </g>
+      <rect x="800" y="${sideY}" width="380" height="${mainHeight}" rx="12" fill="none" stroke="#e5e7eb" stroke-width="2"/>
     </svg>`,
   };
 }
@@ -325,11 +357,7 @@ export async function downloadInspectionPdf(report: InspectionReport, brand: Ins
   addCopy("Terms and conditions", report.terms);
 
   for (const photo of report.photos) {
-    const src = resolveUploadsPublicUrl(photo.url);
-    if (!src) throw new Error("Inspection photo is unavailable.");
-    const response = await fetch(src);
-    if (!response.ok) throw new Error("Could not load a report photo. Retry the PDF download.");
-    const blob = await response.blob();
+    const blob = await loadInspectionPhotoBlob(photo.url);
     const data = await new Promise<string>((resolve, reject) => {
       const reader = new FileReader();
       reader.onload = () => resolve(String(reader.result));

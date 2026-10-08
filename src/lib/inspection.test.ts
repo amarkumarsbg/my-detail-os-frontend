@@ -65,6 +65,11 @@ describe("vehicle inspection", () => {
     expect(conditionVisual.markup).not.toContain("Legacy area");
     expect(conditionVisual.markup).toContain("Small mark");
     expect(conditionVisual.markup).toContain("#3b82f6");
+    expect(conditionVisual.markup).toContain("Condition types");
+    expect(conditionVisual.markup).toContain("Noted conditions (2)");
+    // Legend chips sit in their own row below Overall Pre-Drive, not over its subtitle.
+    expect(conditionVisual.markup).not.toMatch(/y="137"/);
+    expect(conditionVisual.markup).toMatch(/clipPath id="noted-panel"/);
     vi.stubGlobal("Image", class {
       width = 1200;
       height = conditionVisual.height;
