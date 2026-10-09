@@ -12,7 +12,10 @@ import Link from "next/link";
 import { cn, formatDate, formatCurrency } from "@/lib/utils";
 import { apiGet } from "@/lib/api-client";
 import { downloadInvoicePdfFile, type InvoicePdfOpts } from "@/lib/invoice-pdf";
-import { formatInvoiceVehicleDetailsLine } from "@/lib/tax-invoice-format";
+import {
+  buildTaxInvoicePrintHtml,
+  formatInvoiceVehicleDetailsLine,
+} from "@/lib/tax-invoice-format";
 import { resolveMembershipInvoiceDetails } from "@/lib/membership-invoice";
 
 function getTotalPaid(invoice: any): number {
@@ -145,6 +148,19 @@ export default function InvoiceDetailPage() {
     customer?.referralCode ? `?ref=${encodeURIComponent(customer.referralCode)}` : ""
   }`;
 
+  function openPrintFallback(opts: InvoicePdfOpts) {
+    const html = buildTaxInvoicePrintHtml(opts, { includePrintScript: true });
+    const win = window.open("", "_blank");
+    if (!win) {
+      toast.error("Pop-up blocked. Allow pop-ups to save the invoice as PDF.");
+      return;
+    }
+    win.document.open();
+    win.document.write(html);
+    win.document.close();
+    toast.message("Use Print → Save as PDF if the file download is unavailable.");
+  }
+
   async function handleDownloadPdf() {
     if (downloading) return;
     setDownloading(true);
@@ -156,10 +172,17 @@ export default function InvoiceDetailPage() {
       if (!data?.invoice) {
         throw new Error("Invoice details could not be loaded.");
       }
-      await downloadInvoicePdfFile(
-        buildPublicInvoicePdfOpts(data, customer?.referralCode || undefined)
+      const opts = buildPublicInvoicePdfOpts(
+        data,
+        customer?.referralCode || undefined
       );
-      toast.success("Invoice PDF downloaded");
+      try {
+        await downloadInvoicePdfFile(opts);
+        toast.success("Invoice PDF downloaded");
+      } catch (pdfErr) {
+        console.error("[customer/invoices] server PDF failed, using print fallback", pdfErr);
+        openPrintFallback(opts);
+      }
     } catch (err) {
       console.error("[customer/invoices] PDF download failed", err);
       toast.error(err instanceof Error ? err.message : "Could not download the invoice PDF.");

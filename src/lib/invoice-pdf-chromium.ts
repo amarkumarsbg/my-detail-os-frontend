@@ -174,15 +174,36 @@ function localBrowserExecutable(): string | undefined {
   return candidates.find((p) => existsSync(p));
 }
 
+/**
+ * `@sparticuz/chromium-min` does not ship the Chrome binary — it downloads a
+ * version-matched pack at runtime. Calling `executablePath()` with no URL looks
+ * for a local `bin/` folder and fails on Vercel with:
+ * "The input directory .../@sparticuz/chromium-min/bin does not exist."
+ */
+function serverlessChromiumPackUrl(): string {
+  const fromEnv = process.env.CHROMIUM_PACK_URL?.trim();
+  if (fromEnv) return fromEnv;
+  // Keep in sync with package.json `@sparticuz/chromium-min` version.
+  return "https://github.com/Sparticuz/chromium/releases/download/v133.0.0/chromium-v133.0.0-pack.tar";
+}
+
 async function launchPrintBrowser(): Promise<Browser> {
   if (isServerlessHost()) {
     const chromium = await import("@sparticuz/chromium-min");
     chromium.default.setGraphicsMode = false;
+    const executablePath = await chromium.default.executablePath(
+      serverlessChromiumPackUrl()
+    );
     return puppeteer.launch({
       args: chromium.default.args,
-      defaultViewport: { width: 800, height: 1200, deviceScaleFactor: 1 },
-      executablePath: await chromium.default.executablePath(),
-      headless: true,
+      defaultViewport:
+        chromium.default.defaultViewport ?? {
+          width: 800,
+          height: 1200,
+          deviceScaleFactor: 1,
+        },
+      executablePath,
+      headless: chromium.default.headless ?? true,
     });
   }
 
