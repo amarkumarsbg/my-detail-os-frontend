@@ -160,13 +160,13 @@ const KANBAN_COLORS: Record<JobCardStatus, string> = {
 };
 
 const STATUS_BADGE_STYLES: Record<JobCardStatus, string> = {
-  DELIVERED: "bg-green-50 text-green-700 border-green-200/50 dark:bg-green-950/40 dark:text-green-400 dark:border-green-900/30",
-  RECEIVED: "bg-amber-50 text-amber-700 border-amber-200/50 dark:bg-amber-950/40 dark:text-amber-400 dark:border-amber-900/30",
-  INSPECTION: "bg-blue-50 text-blue-700 border-blue-200/50 dark:bg-blue-950/40 dark:text-blue-400 dark:border-blue-900/30",
-  AWAITING_SERVICE: "bg-blue-50 text-blue-700 border-blue-200/50 dark:bg-blue-950/40 dark:text-blue-400 dark:border-blue-900/30",
-  QUALITY_CHECK: "bg-blue-50 text-blue-700 border-blue-200/50 dark:bg-blue-950/40 dark:text-blue-400 dark:border-blue-900/30",
-  READY: "bg-purple-50 text-purple-700 border-purple-200/50 dark:bg-purple-950/40 dark:text-purple-400 dark:border-purple-900/30",
-  CANCELLED: "bg-red-50 text-red-700 border-red-200/50 dark:bg-red-950/40 dark:text-red-400 dark:border-red-900/30",
+  DELIVERED: "bg-green-50 text-green-700 border-green-200/50 dark:bg-green-500/15 dark:text-green-300 dark:border-green-500/30",
+  RECEIVED: "bg-amber-50 text-amber-700 border-amber-200/50 dark:bg-amber-500/15 dark:text-amber-300 dark:border-amber-500/30",
+  INSPECTION: "bg-blue-50 text-blue-700 border-blue-200/50 dark:bg-blue-500/15 dark:text-blue-300 dark:border-blue-500/30",
+  AWAITING_SERVICE: "bg-sky-50 text-sky-700 border-sky-200/50 dark:bg-sky-500/15 dark:text-sky-300 dark:border-sky-500/30",
+  QUALITY_CHECK: "bg-cyan-50 text-cyan-700 border-cyan-200/50 dark:bg-cyan-500/15 dark:text-cyan-300 dark:border-cyan-500/30",
+  READY: "bg-purple-50 text-purple-700 border-purple-200/50 dark:bg-purple-500/15 dark:text-purple-300 dark:border-purple-500/30",
+  CANCELLED: "bg-red-50 text-red-700 border-red-200/50 dark:bg-red-500/15 dark:text-red-300 dark:border-red-500/30",
 };
 
 export default function JobCardsPage() {
@@ -877,7 +877,7 @@ export default function JobCardsPage() {
                   className="group flex flex-col rounded-2xl border border-border bg-card overflow-hidden shadow-sm hover:shadow-md transition-all duration-200 w-full"
                 >
                   {/* Top Section */}
-                  <div className="p-4 bg-background space-y-3.5 pb-3">
+                  <div className="p-4 space-y-3.5 pb-3">
                     {/* Plate & Status & Dropdown row */}
                     <div className="flex items-start justify-between gap-2">
                       <div className="space-y-1.5 min-w-0">
@@ -1075,13 +1075,13 @@ export default function JobCardsPage() {
                     {/* Meta tags (Invoice, Photos, Payment status) */}
                     <div className="flex flex-wrap items-center gap-1.5 pt-1">
                       {invoices.some((inv) => inv.jobCardId === jc.id) && (
-                        <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-semibold bg-emerald-50 text-emerald-700 border border-emerald-200/50 dark:bg-emerald-950/40 dark:text-emerald-400">
+                        <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-semibold bg-emerald-50 text-emerald-700 border border-emerald-200/50 dark:bg-emerald-500/15 dark:text-emerald-300 dark:border-emerald-500/30">
                           <FileText className="w-3 h-3 shrink-0" />
                           Invoiced
                         </span>
                       )}
                       {(((jc as any).beforePhotos?.length || 0) > 0 || ((jc as any).afterPhotos?.length || 0) > 0 || (jc.inspectionPhotos?.length || 0) > 0) && (
-                        <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-semibold bg-blue-50 text-blue-700 border border-blue-200/50 dark:bg-blue-950/40 dark:text-blue-400">
+                        <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-semibold bg-blue-50 text-blue-700 border border-blue-200/50 dark:bg-blue-500/15 dark:text-blue-300 dark:border-blue-500/30">
                           <ImageIcon className="w-3 h-3 shrink-0" />
                           Photos
                         </span>
@@ -1097,13 +1097,13 @@ export default function JobCardsPage() {
                           : payable - paid;
                         
                         let statusLabel = "Unpaid";
-                        let badgeColor = "bg-rose-50 text-rose-700 border-rose-200/50 dark:bg-rose-950/40 dark:text-rose-400";
+                        let badgeColor = "bg-rose-50 text-rose-700 border-rose-200/50 dark:bg-rose-500/15 dark:text-rose-300 dark:border-rose-500/30";
                         if (paid > 0 && due > 0) {
                           statusLabel = "Partially Paid";
-                          badgeColor = "bg-amber-50 text-amber-700 border-amber-200/50 dark:bg-amber-950/40 dark:text-amber-400";
+                          badgeColor = "bg-amber-50 text-amber-700 border-amber-200/50 dark:bg-amber-500/15 dark:text-amber-300 dark:border-amber-500/30";
                         } else if (paid > 0 && due <= 0) {
                           statusLabel = "Paid";
-                          badgeColor = "bg-green-50 text-green-700 border-green-200/50 dark:bg-green-950/40 dark:text-green-400";
+                          badgeColor = "bg-green-50 text-green-700 border-green-200/50 dark:bg-green-500/15 dark:text-green-300 dark:border-green-500/30";
                         }
                         
                         return (
@@ -1117,7 +1117,7 @@ export default function JobCardsPage() {
                   </div>
 
                   {/* Customer Section */}
-                  <div className="px-4 py-3 border-t border-border/40 flex items-center justify-between gap-2 bg-background">
+                  <div className="px-4 py-3 border-t border-border/60 flex items-center justify-between gap-2">
                     <div className="flex items-center gap-2.5 min-w-0">
                       <div className="w-8 h-8 rounded-full bg-muted flex items-center justify-center shrink-0">
                         <User className="w-4 h-4 text-muted-foreground" />
@@ -1130,7 +1130,7 @@ export default function JobCardsPage() {
                   </div>
 
                   {/* Mechanic & Expected Delivery Row */}
-                  <div className="px-4 py-3 border-t border-border/40 grid grid-cols-2 gap-4 bg-background text-xs">
+                  <div className="px-4 py-3 border-t border-border/60 grid grid-cols-2 gap-4 text-xs">
                     <div className="space-y-1">
                       <p className="text-muted-foreground font-medium">Assigned Mechanic</p>
                       <div className="flex items-center gap-1.5 text-foreground font-semibold">
@@ -1149,7 +1149,7 @@ export default function JobCardsPage() {
 
                   <div className="mt-auto">
                     {/* Total Cost & Compact Created On Section */}
-                    <div className="px-4 py-3 border-t border-border/40 space-y-1.5 bg-background">
+                    <div className="px-4 py-3 border-t border-border/60 space-y-1.5">
                       <div className="flex items-center justify-between">
                         <span className="text-xs text-muted-foreground font-semibold">
                           Created {formatDateTime(jc.createdAt || jc.expectedDelivery)}
@@ -1179,18 +1179,18 @@ export default function JobCardsPage() {
                     </div>
 
                     {/* Bottom Actions Grid */}
-                    <div className="px-4 py-3 bg-muted/10 border-t border-border/40 flex text-xs font-semibold">
+                    <div className="px-4 py-3 border-t border-border/60 flex text-xs font-semibold">
                       <Button
                         type="button"
                         variant="outline"
                         size="sm"
-                        className="w-full gap-1.5 h-9 text-[#0b5cda] border-[#0b5cda]/30 hover:border-[#0b5cda] hover:bg-blue-50/20 font-bold"
+                        className="w-full gap-1.5 h-9 text-primary border-primary/35 hover:border-primary hover:bg-primary/10 font-bold"
                         onClick={(e) => {
                           e.stopPropagation();
                           router.push(`/job-cards/${jc.id}`);
                         }}
                       >
-                        <Eye className="w-3.5 h-3.5 text-[#0b5cda]" />
+                        <Eye className="w-3.5 h-3.5" />
                         View Details
                       </Button>
                     </div>

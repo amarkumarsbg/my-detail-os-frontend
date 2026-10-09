@@ -15,35 +15,38 @@ export type KPICardTone =
 
 const toneIconClass: Record<KPICardTone, string> = {
   emerald:
-    "bg-emerald-50 text-emerald-600 dark:bg-emerald-950/50 dark:text-emerald-400",
-  blue: "bg-blue-50 text-blue-600 dark:bg-blue-950/50 dark:text-blue-400",
+    "bg-emerald-50 text-emerald-600 dark:bg-emerald-500/25 dark:text-emerald-300",
+  blue: "bg-blue-50 text-blue-600 dark:bg-blue-500/25 dark:text-blue-300",
   amber:
-    "bg-amber-50 text-amber-600 dark:bg-amber-950/50 dark:text-amber-400",
+    "bg-amber-50 text-amber-600 dark:bg-amber-500/25 dark:text-amber-300",
   violet:
-    "bg-violet-50 text-violet-600 dark:bg-violet-950/50 dark:text-violet-400",
+    "bg-violet-50 text-violet-600 dark:bg-violet-500/25 dark:text-violet-300",
   orange:
-    "bg-orange-50 text-orange-600 dark:bg-orange-950/50 dark:text-orange-400",
+    "bg-orange-50 text-orange-600 dark:bg-orange-500/25 dark:text-orange-300",
   slate:
-    "bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-300",
-  rose: "bg-rose-50 text-rose-600 dark:bg-rose-950/50 dark:text-rose-400",
+    "bg-slate-100 text-slate-600 dark:bg-slate-500/25 dark:text-slate-200",
+  rose: "bg-rose-50 text-rose-600 dark:bg-rose-500/25 dark:text-rose-300",
 };
 
-/** Full-card wash: top-left tint → light / card base (accounting-style KPI tiles). */
+/**
+ * Full-card wash: pastel fill in light; matching tinted fill in dark
+ * (same “colored tile” energy as light mode, not a thin neon frame).
+ */
 const toneSurfaceClass: Record<KPICardTone, string> = {
   emerald:
-    "border-2 border-emerald-200 bg-gradient-to-br from-emerald-50/80 via-white to-background shadow-sm dark:border-emerald-800 dark:from-emerald-950/40 dark:via-card dark:to-card",
+    "border-2 border-emerald-200 bg-gradient-to-br from-emerald-50/80 via-white to-background shadow-sm dark:border-emerald-400/40 dark:from-emerald-500/25 dark:via-emerald-950/55 dark:to-card",
   blue:
-    "border-2 border-blue-200 bg-gradient-to-br from-blue-50/80 via-white to-background shadow-sm dark:border-blue-800 dark:from-blue-950/40 dark:via-card dark:to-card",
+    "border-2 border-blue-200 bg-gradient-to-br from-blue-50/80 via-white to-background shadow-sm dark:border-blue-400/40 dark:from-blue-500/25 dark:via-blue-950/55 dark:to-card",
   amber:
-    "border-2 border-amber-200 bg-gradient-to-br from-amber-50/80 via-white to-background shadow-sm dark:border-amber-800 dark:from-amber-950/40 dark:via-card dark:to-card",
+    "border-2 border-amber-200 bg-gradient-to-br from-amber-50/80 via-white to-background shadow-sm dark:border-amber-400/40 dark:from-amber-500/25 dark:via-amber-950/55 dark:to-card",
   violet:
-    "border-2 border-violet-200 bg-gradient-to-br from-violet-50/80 via-white to-background shadow-sm dark:border-violet-800 dark:from-violet-950/40 dark:via-card dark:to-card",
+    "border-2 border-violet-200 bg-gradient-to-br from-violet-50/80 via-white to-background shadow-sm dark:border-violet-400/40 dark:from-violet-500/25 dark:via-violet-950/55 dark:to-card",
   orange:
-    "border-2 border-orange-200 bg-gradient-to-br from-orange-50/80 via-white to-background shadow-sm dark:border-orange-800 dark:from-orange-950/40 dark:via-card dark:to-card",
+    "border-2 border-orange-200 bg-gradient-to-br from-orange-50/80 via-white to-background shadow-sm dark:border-orange-400/40 dark:from-orange-500/25 dark:via-orange-950/55 dark:to-card",
   slate:
-    "border-2 border-slate-200 bg-gradient-to-br from-slate-50/80 via-white to-background shadow-sm dark:border-slate-700 dark:from-slate-900/40 dark:via-card dark:to-card",
+    "border-2 border-slate-200 bg-gradient-to-br from-slate-50/80 via-white to-background shadow-sm dark:border-slate-400/35 dark:from-slate-500/20 dark:via-slate-900/60 dark:to-card",
   rose:
-    "border-2 border-rose-200 bg-gradient-to-br from-rose-50/80 via-white to-background shadow-sm dark:border-rose-800 dark:from-rose-950/40 dark:via-card dark:to-card",
+    "border-2 border-rose-200 bg-gradient-to-br from-rose-50/80 via-white to-background shadow-sm dark:border-rose-400/40 dark:from-rose-500/25 dark:via-rose-950/55 dark:to-card",
 };
 
 /** Clickable filter chips (Parties): inactive = white card, light gray border. */
@@ -105,17 +108,17 @@ const toneFilterIdleTitleClass: Record<KPICardTone, string> = {
 
 const toneHoverClass: Record<KPICardTone, string> = {
   emerald:
-    "hover:border-emerald-400 hover:bg-emerald-200/80 dark:hover:border-emerald-600 dark:hover:bg-emerald-950/70",
-  blue: "hover:border-blue-400 hover:bg-blue-200/80 dark:hover:border-blue-600 dark:hover:bg-blue-950/70",
+    "hover:border-emerald-400 hover:bg-emerald-200/80 dark:hover:border-emerald-400/55 dark:hover:from-emerald-500/30",
+  blue: "hover:border-blue-400 hover:bg-blue-200/80 dark:hover:border-blue-400/55 dark:hover:from-blue-500/30",
   amber:
-    "hover:border-amber-400 hover:bg-amber-200/80 dark:hover:border-amber-600 dark:hover:bg-amber-950/70",
+    "hover:border-amber-400 hover:bg-amber-200/80 dark:hover:border-amber-400/55 dark:hover:from-amber-500/30",
   violet:
-    "hover:border-violet-400 hover:bg-violet-200/80 dark:hover:border-violet-600 dark:hover:bg-violet-950/70",
+    "hover:border-violet-400 hover:bg-violet-200/80 dark:hover:border-violet-400/55 dark:hover:from-violet-500/30",
   orange:
-    "hover:border-orange-400 hover:bg-orange-200/80 dark:hover:border-orange-600 dark:hover:bg-orange-950/70",
+    "hover:border-orange-400 hover:bg-orange-200/80 dark:hover:border-orange-400/55 dark:hover:from-orange-500/30",
   slate:
-    "hover:border-slate-400 hover:bg-slate-200/80 dark:hover:border-slate-600 dark:hover:bg-slate-900/70",
-  rose: "hover:border-rose-400 hover:bg-rose-200/80 dark:hover:border-rose-600 dark:hover:bg-rose-950/70",
+    "hover:border-slate-400 hover:bg-slate-200/80 dark:hover:border-slate-400/50 dark:hover:from-slate-500/25",
+  rose: "hover:border-rose-400 hover:bg-rose-200/80 dark:hover:border-rose-400/55 dark:hover:from-rose-500/30",
 };
 
 interface KPICardProps {
@@ -228,7 +231,7 @@ export function KPICard({
                 isCompact ? "text-xs" : "text-sm",
                 isFilterChip && active && tone && toneFilterActiveTitleClass[tone],
                 isFilterChip && !active && tone && toneFilterIdleTitleClass[tone],
-                !isFilterChip && "text-foreground/80 dark:text-foreground/85",
+                !isFilterChip && "text-foreground/80 dark:text-foreground/90",
                 titleClassName
               )}
             >
@@ -269,14 +272,14 @@ export function KPICard({
                   <span className="text-[11px] text-foreground/65 dark:text-foreground/70">{emptyHint}</span>
                 )}
                 {subtitle && (
-                  <span className="text-xs text-foreground/75 dark:text-foreground/80">
+                  <span className="text-xs text-foreground/75 dark:text-slate-300">
                     {subtitle}
                   </span>
                 )}
               </div>
             )}
             {footerNote && (
-              <p className="text-xs text-foreground/75 dark:text-foreground/80 pt-0.5">{footerNote}</p>
+              <p className="text-xs text-foreground/75 dark:text-slate-300 pt-0.5">{footerNote}</p>
             )}
           </div>
           <div

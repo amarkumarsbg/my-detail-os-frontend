@@ -610,7 +610,7 @@ export default function BookingsPage() {
                         <button
                           type="button"
                           disabled={creatingFromAppointmentId === apt.id}
-                          className="flex flex-1 h-8 items-center justify-center gap-1.5 rounded-lg bg-primary px-3 text-xs font-semibold text-primary-foreground hover:bg-primary/90 transition-colors disabled:opacity-60 disabled:pointer-events-none whitespace-nowrap"
+                          className="flex flex-1 h-8 items-center justify-center gap-1.5 rounded-lg bg-primary px-3 text-xs font-semibold text-primary-foreground hover:bg-primary/90 transition-colors disabled:opacity-60 disabled:pointer-events-none whitespace-nowrap dark:bg-primary/15 dark:text-primary dark:border dark:border-primary/35 dark:hover:bg-primary/25"
                           onClick={() => void createJobFromAppointment(apt)}
                         >
                           {creatingFromAppointmentId === apt.id ? (

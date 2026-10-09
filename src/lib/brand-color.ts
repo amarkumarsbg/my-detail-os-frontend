@@ -72,6 +72,29 @@ export function brandGlowDim(hex: string, alpha = 0.1): string {
   return `rgba(${rgb.r}, ${rgb.g}, ${rgb.b}, ${alpha})`;
 }
 
+/** Mix hex toward white (amount 0–1). */
+export function lightenHex(hex: string, amount: number): string {
+  const rgb = hexToRgb(hex);
+  if (!rgb) return normalizeHex(hex) ?? DEFAULT_BRAND_PRIMARY;
+  const t = Math.min(1, Math.max(0, amount));
+  const r = Math.round(rgb.r + (255 - rgb.r) * t);
+  const g = Math.round(rgb.g + (255 - rgb.g) * t);
+  const b = Math.round(rgb.b + (255 - rgb.b) * t);
+  return `#${[r, g, b].map((c) => c.toString(16).padStart(2, "0")).join("")}`.toUpperCase();
+}
+
+/**
+ * Only very dark brand fills need a lift in dark mode.
+ * Keep mid tones (teal, blue, etc.) so we don’t get neon mint + dark text.
+ */
+export function brandPrimaryForTheme(hex: string, isDark: boolean): string {
+  const primary = normalizeHex(hex) ?? DEFAULT_BRAND_PRIMARY;
+  if (!isDark) return primary;
+  const lum = relativeLuminance(primary);
+  if (lum >= 0.22) return primary;
+  return lightenHex(primary, 0.22);
+}
+
 export type BrandCssVars = {
   primary: string;
   primaryForeground: string;
@@ -83,24 +106,32 @@ export type BrandCssVars = {
   sidebarAccent: string;
 };
 
-export function resolveBrandCssVars(hex: string): BrandCssVars {
-  const primary = normalizeHex(hex) ?? DEFAULT_BRAND_PRIMARY;
+export function resolveBrandCssVars(hex: string, isDark = false): BrandCssVars {
+  const primary = brandPrimaryForTheme(hex, isDark);
   const primaryForeground = contrastForeground(primary);
+  const glow = isDark ? lightenHex(primary, 0.18) : primary;
   return {
     primary,
     primaryForeground,
-    ring: primary,
+    ring: isDark ? glow : primary,
     sidebarActive: primary,
     sidebarActiveForeground: primaryForeground,
-    sidebarGlow: primary,
-    sidebarGlowDim: brandGlowDim(primary, 0.1),
-    sidebarAccent: brandGlowDim(primary, 0.15),
+    sidebarGlow: glow,
+    sidebarGlowDim: brandGlowDim(primary, isDark ? 0.14 : 0.1),
+    sidebarAccent: brandGlowDim(primary, isDark ? 0.16 : 0.15),
   };
 }
 
 /** Apply brand tokens on :root so Tailwind `bg-primary` / sidebar active follow. */
-export function applyBrandCssVars(hex: string, root: HTMLElement = document.documentElement): void {
-  const v = resolveBrandCssVars(hex);
+export function applyBrandCssVars(
+  hex: string,
+  root: HTMLElement = document.documentElement,
+  options?: { isDark?: boolean }
+): void {
+  const isDark =
+    options?.isDark ??
+    (typeof document !== "undefined" && root.classList.contains("dark"));
+  const v = resolveBrandCssVars(hex, isDark);
   root.style.setProperty("--primary", v.primary);
   root.style.setProperty("--primary-foreground", v.primaryForeground);
   root.style.setProperty("--ring", v.ring);

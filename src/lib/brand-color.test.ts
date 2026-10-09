@@ -3,9 +3,11 @@
 import { afterEach, describe, expect, it } from "vitest";
 import {
   applyBrandFavicon,
+  brandPrimaryForTheme,
   contrastForeground,
   DEFAULT_BRAND_PRIMARY,
   isValidHex,
+  lightenHex,
   matchingBrandPresetId,
   normalizeHex,
   PLATFORM_FAVICON_HREF,
@@ -41,6 +43,13 @@ describe("brand-color", () => {
     const v = resolveBrandCssVars("not-a-color");
     expect(v.primary).toBe(DEFAULT_BRAND_PRIMARY);
     expect(v.ring).toBe(DEFAULT_BRAND_PRIMARY);
+  });
+
+  it("keeps mid-tone brand primary in dark mode; only lifts very dark fills", () => {
+    expect(brandPrimaryForTheme("#14B8A6", false)).toBe("#14B8A6");
+    expect(brandPrimaryForTheme("#14B8A6", true)).toBe("#14B8A6");
+    expect(brandPrimaryForTheme("#475569", true)).toBe(lightenHex("#475569", 0.22));
+    expect(resolveBrandCssVars("#14B8A6", true).primaryForeground).toBe("#FFFFFF");
   });
 
   it("matches presets", () => {

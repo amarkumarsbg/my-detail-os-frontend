@@ -146,10 +146,10 @@ const QUICK_ACTIONS = [
     href: "/job-cards/new",
     label: "New Job Card",
     icon: Plus,
-    bgClass: "bg-blue-50/40 hover:bg-blue-50/70 border-blue-300 hover:border-blue-500 dark:bg-blue-950/20 dark:hover:bg-blue-950/30 dark:border-blue-800 dark:hover:border-blue-600 hover:shadow-blue-500/5",
-    iconBgClass: "bg-blue-100/80 text-blue-600 dark:bg-blue-900/50 dark:text-blue-400",
-    textClass: "text-blue-950 dark:text-blue-100",
-    plusClass: "text-blue-500/80",
+    bgClass: "bg-primary/5 hover:bg-primary/10 border-primary/30 hover:border-primary/55 dark:bg-primary/10 dark:hover:bg-primary/15 dark:border-primary/35 dark:hover:border-primary/55 hover:shadow-primary/5",
+    iconBgClass: "bg-primary/15 text-primary dark:bg-primary/20 dark:text-primary",
+    textClass: "text-foreground",
+    plusClass: "text-primary/80",
   },
   {
     href: "/bookings/walk-in",
@@ -1184,7 +1184,7 @@ export default function DashboardPage() {
             <Link href="/job-cards/new">
               <Button
                 variant="default"
-                className="h-10 inline-flex items-center justify-center bg-gradient-to-r from-blue-600 to-blue-500 border border-blue-600 hover:from-blue-700 hover:to-blue-600 text-white transition-all duration-300 transform hover:-translate-y-0.5 hover:shadow-[0_4px_12px_rgba(59,130,246,0.25)] rounded-lg font-semibold px-4 py-2"
+                className="h-10 inline-flex items-center justify-center rounded-lg px-4 py-2 font-semibold transition-all duration-300 transform hover:-translate-y-0.5 hover:shadow-[0_4px_12px_rgba(20,184,166,0.28)]"
               >
                 <Plus className="w-4 h-4 mr-1 shrink-0" />
                 <span className="leading-none">New Job Card</span>
@@ -1367,25 +1367,25 @@ export default function DashboardPage() {
                     label: "Total",
                     value: todaysFunnel.total,
                     className:
-                      "bg-slate-100/90 text-slate-900 dark:bg-slate-800/50 dark:text-slate-100",
+                      "bg-slate-100/90 text-slate-900 dark:bg-slate-500/20 dark:text-slate-50 dark:ring-1 dark:ring-slate-400/30",
                   },
                   {
                     label: "Assigned",
                     value: todaysFunnel.assigned,
                     className:
-                      "bg-sky-100/90 text-sky-900 dark:bg-sky-950/40 dark:text-sky-100",
+                      "bg-sky-100/90 text-sky-900 dark:bg-sky-500/20 dark:text-sky-50 dark:ring-1 dark:ring-sky-400/40",
                   },
                   {
                     label: "In Progress",
                     value: todaysFunnel.inProgress,
                     className:
-                      "bg-violet-100/90 text-violet-900 dark:bg-violet-950/40 dark:text-violet-100",
+                      "bg-violet-100/90 text-violet-900 dark:bg-violet-500/20 dark:text-violet-50 dark:ring-1 dark:ring-violet-400/40",
                   },
                   {
                     label: "Completed",
                     value: todaysFunnel.completed,
                     className:
-                      "bg-emerald-100/90 text-emerald-900 dark:bg-emerald-950/40 dark:text-emerald-100",
+                      "bg-emerald-100/90 text-emerald-900 dark:bg-emerald-500/20 dark:text-emerald-50 dark:ring-1 dark:ring-emerald-400/40",
                   },
                 ] as const
               ).map((tile) => (
@@ -1393,7 +1393,7 @@ export default function DashboardPage() {
                   key={tile.label}
                   className={`flex min-h-28 flex-col items-center justify-center rounded-xl px-3 py-5 text-center ${tile.className}`}
                 >
-                  <p className="text-xs font-medium opacity-80">{tile.label}</p>
+                  <p className="text-xs font-medium opacity-80 dark:opacity-90">{tile.label}</p>
                   <p className="mt-1 text-3xl font-bold tabular-nums">{tile.value}</p>
                 </div>
               ))}

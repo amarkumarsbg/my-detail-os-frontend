@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect } from "react";
+import { useTheme } from "next-themes";
 import {
   applyBrandCssVars,
   applyBrandFavicon,
@@ -14,15 +15,18 @@ const BRAND_FAVICON_CACHE_KEY = "prime-brand-primary";
 /**
  * Keeps CSS primary / sidebar-active tokens and favicon in sync with company brandPrimary.
  * Mount once under ThemeProvider (root layout).
+ * Re-applies a lifted brand fill when dark mode is active so accents stay vivid.
  */
 export function BrandThemeApplier() {
   const brandPrimary = useSettingsStore((s) => s.brandPrimary);
   const brandPrimaryPreview = useSettingsStore((s) => s.brandPrimaryPreview);
+  const { resolvedTheme } = useTheme();
 
   useEffect(() => {
     const hex =
       normalizeHex(brandPrimaryPreview ?? brandPrimary) ?? DEFAULT_BRAND_PRIMARY;
-    applyBrandCssVars(hex);
+    const isDark = resolvedTheme === "dark";
+    applyBrandCssVars(hex, document.documentElement, { isDark });
     applyBrandFavicon(hex);
     try {
       if (!brandPrimaryPreview) {
@@ -31,7 +35,7 @@ export function BrandThemeApplier() {
     } catch {
       /* ignore */
     }
-  }, [brandPrimary, brandPrimaryPreview]);
+  }, [brandPrimary, brandPrimaryPreview, resolvedTheme]);
 
   return null;
 }

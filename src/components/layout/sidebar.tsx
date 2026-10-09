@@ -279,10 +279,10 @@ function SidebarContent({
                           "group flex cursor-pointer items-center gap-2.5 rounded-xl px-2.5 py-2.5 text-[13px] font-medium origin-left",
                           "translate-x-0 scale-100 transform-gpu transition-[color,background-color,transform,box-shadow] duration-200 ease-out",
                           isActive
-                            ? "bg-[var(--sidebar-active)] text-[var(--sidebar-active-foreground)] shadow-sm"
+                            ? "bg-[var(--sidebar-active)] text-[var(--sidebar-active-foreground)] shadow-sm dark:bg-[var(--sidebar-accent)] dark:text-[var(--sidebar-glow)] dark:shadow-none dark:ring-1 dark:ring-[var(--sidebar-glow)]/30"
                             : "text-[var(--sidebar-foreground)] hover:bg-[var(--sidebar-accent)] hover:text-[var(--sidebar-accent-foreground)] hover:shadow-sm motion-safe:hover:scale-[1.03] motion-safe:hover:translate-x-0.5"
                         )}
-                      >
+                        >
                         <item.icon
                           className={cn(
                             "h-4 w-4 shrink-0 transition-transform duration-200 ease-out",
@@ -300,7 +300,7 @@ function SidebarContent({
                             className={cn(
                               "ml-auto inline-flex items-center justify-center rounded-full px-1.5 py-0.5 text-[10px] font-bold leading-none tabular-nums",
                               isActive
-                                ? "bg-white/90 text-[var(--sidebar-active)]"
+                                ? "bg-white/90 text-[var(--sidebar-active)] dark:bg-[var(--sidebar-glow)]/20 dark:text-[var(--sidebar-glow)]"
                                 : "bg-[var(--sidebar-active)] text-[var(--sidebar-active-foreground)]"
                             )}
                           >
