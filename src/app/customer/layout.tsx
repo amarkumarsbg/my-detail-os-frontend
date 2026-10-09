@@ -9,7 +9,7 @@ import { resolveUploadsPublicUrl } from "@/lib/api-base";
 import { getInitials } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { LogOut, Home, FileText, Car, ClipboardList, User, Trophy, Wallet, Share2, CreditCard, KeyRound, Moon, Sun, Menu, X, RefreshCw } from "lucide-react";
+import { LogOut, Home, FileText, Car, ClipboardList, ClipboardCheck, User, Trophy, Wallet, Share2, CreditCard, KeyRound, Moon, Sun, Menu, X, RefreshCw } from "lucide-react";
 import { useTheme } from "next-themes";
 import Link from "next/link";
 import { cn } from "@/lib/utils";
@@ -142,6 +142,7 @@ export default function CustomerLayout({ children }: { children: React.ReactNode
       items: [
         { label: "Home", icon: Home, href: "/customer/dashboard" },
         { label: "My Jobs", icon: ClipboardList, href: "/customer/jobs" },
+        { label: "Inspections", icon: ClipboardCheck, href: "/customer/inspections" },
         { label: "Invoices", icon: FileText, href: "/customer/invoices" },
         { label: "Vehicles", icon: Car, href: "/customer/vehicles" },
       ],
@@ -189,6 +190,8 @@ export default function CustomerLayout({ children }: { children: React.ReactNode
                 if (appPath === "/customer/dashboard") return "Dashboard";
                 if (appPath === "/customer/jobs") return "My Jobs";
                 if (appPath.startsWith("/customer/jobs/")) return "Job Details";
+                if (appPath === "/customer/inspections") return "Inspections";
+                if (appPath.startsWith("/customer/inspections/")) return "Inspection Report";
                 if (appPath === "/customer/invoices") return "Billing";
                 if (appPath.startsWith("/customer/invoices/")) return "Invoice";
                 if (appPath === "/customer/vehicles") return "My Vehicles";

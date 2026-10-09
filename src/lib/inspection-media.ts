@@ -1,14 +1,24 @@
 import { resolveUploadsPublicUrl } from "./api-base";
 import { apiGetBlob } from "./api-client";
 
-/** Backend stores private assets behind authenticated `/api/inspections/assets/:id` URLs. */
+/** Backend stores private assets behind authenticated inspection asset URLs. */
 export function inspectionAssetApiPath(url: string | null | undefined): string | null {
   if (!url?.trim()) return null;
   const value = url.trim();
-  if (value.startsWith("/api/inspections/assets/")) return value;
+  if (
+    value.startsWith("/api/inspections/assets/") ||
+    value.startsWith("/api/customer/inspections/assets/")
+  ) {
+    return value;
+  }
   try {
     const parsed = new URL(value, "http://local.invalid");
-    if (parsed.pathname.startsWith("/api/inspections/assets/")) return parsed.pathname;
+    if (
+      parsed.pathname.startsWith("/api/inspections/assets/") ||
+      parsed.pathname.startsWith("/api/customer/inspections/assets/")
+    ) {
+      return parsed.pathname;
+    }
   } catch {
     /* ignore invalid absolute URLs */
   }

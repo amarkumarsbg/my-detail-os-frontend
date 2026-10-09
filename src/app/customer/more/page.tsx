@@ -9,6 +9,7 @@ import {
   Share2,
   CreditCard,
   FileText,
+  ClipboardCheck,
   ChevronRight,
   AlertCircle,
 } from "lucide-react";
@@ -35,6 +36,7 @@ const menuSections = [
     title: "Billing",
     items: [
       { label: "Invoices", description: "View all your bills", icon: FileText, href: "/customer/invoices" },
+      { label: "Inspections", description: "Vehicle inspection reports", icon: ClipboardCheck, href: "/customer/inspections" },
     ],
   },
 ];

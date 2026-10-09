@@ -9,10 +9,13 @@ export function AuthenticatedInspectionImage({
   src,
   alt,
   className,
+  loadBlob,
 }: {
   src: string;
   alt: string;
   className?: string;
+  /** Override blob loader (e.g. customer JWT). Defaults to staff auth fetch. */
+  loadBlob?: (url: string) => Promise<Blob>;
 }) {
   const publicUrl = resolveInspectionPhotoDisplayUrl(src);
   const [objectUrl, setObjectUrl] = useState<string | null>(publicUrl ?? null);
@@ -34,7 +37,8 @@ export function AuthenticatedInspectionImage({
     setFailed(false);
     setObjectUrl(null);
 
-    void loadInspectionPhotoBlob(src)
+    const fetchBlob = loadBlob ?? loadInspectionPhotoBlob;
+    void fetchBlob(src)
       .then((blob) => {
         if (cancelled) return;
         created = URL.createObjectURL(blob);
@@ -51,7 +55,7 @@ export function AuthenticatedInspectionImage({
       cancelled = true;
       if (created) URL.revokeObjectURL(created);
     };
-  }, [src]);
+  }, [src, loadBlob]);
 
   if (loading) {
     return (

@@ -53,6 +53,7 @@ export const NAV_GROUPS: { label: string; items: NavItemDef[] }[] = [
     items: [
       { label: "Dashboard", href: "/dashboard", icon: LayoutDashboard, permissionKey: "DASHBOARD" },
       { label: "Job Cards", href: "/job-cards", icon: ClipboardList, permissionKey: "JOB_CARDS" },
+      { label: "Vehicle Inspections", href: "/inspections", icon: ClipboardList, permissionKey: "JOB_CARDS" },
       { label: "Bookings", href: "/bookings", icon: CalendarCheck, permissionKey: "BOOKINGS" },
       { label: "Pickup & Drop", href: "/pickup-drop", icon: Truck, permissionKey: "PICKUP_DROP" },
       { label: "Counter Sale", href: "/counter-sale", icon: ShoppingCart, permissionKey: "BILLING" },
@@ -75,7 +76,6 @@ export const NAV_GROUPS: { label: string; items: NavItemDef[] }[] = [
   {
     label: "Workshop",
     items: [
-      { label: "Vehicle Inspections", href: "/inspections", icon: ClipboardList, permissionKey: "JOB_CARDS" },
       { label: "Services", href: "/services", icon: Wrench, roles: ["ADMIN", "MANAGER"], permissionKey: "SERVICES" },
       {
         label: "Inventory Hub",

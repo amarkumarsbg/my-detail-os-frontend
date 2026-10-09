@@ -8,10 +8,14 @@ import {
 describe("inspection media urls", () => {
   it("detects protected inspection asset API paths", () => {
     expect(inspectionAssetApiPath("/api/inspections/assets/abc-123")).toBe("/api/inspections/assets/abc-123");
+    expect(inspectionAssetApiPath("/api/customer/inspections/assets/abc-123")).toBe(
+      "/api/customer/inspections/assets/abc-123"
+    );
     expect(inspectionAssetApiPath("https://api.example.com/api/inspections/assets/abc-123")).toBe(
       "/api/inspections/assets/abc-123"
     );
     expect(isProtectedInspectionAssetUrl("/api/inspections/assets/abc-123")).toBe(true);
+    expect(isProtectedInspectionAssetUrl("/api/customer/inspections/assets/abc-123")).toBe(true);
   });
 
   it("does not treat public upload paths as protected assets", () => {
