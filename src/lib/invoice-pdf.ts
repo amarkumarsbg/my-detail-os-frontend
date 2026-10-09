@@ -27,8 +27,12 @@ export function invoicePdfFilename(
 /** Stable key so repeat emails reuse the cached PDF when the invoice unchanged. */
 export function buildInvoicePdfCacheKey(opts: InvoicePdfOpts): string {
   const inv = opts.invoice;
-  const lines = inv.lineItems.map((l) => `${l.id}:${l.total}:${l.unitPrice}`).join(",");
-  const pays = inv.payments.map((p) => `${p.id}:${p.amount}`).join(",");
+  const lines = (inv.lineItems ?? [])
+    .map((l) => `${l.id}:${l.total}:${l.unitPrice}`)
+    .join(",");
+  const pays = (inv.payments ?? opts.payments ?? [])
+    .map((p) => `${p.id}:${p.amount}`)
+    .join(",");
   const gstMode = opts.business.gstRegistrationStatus ?? "REGISTERED";
   const mem = opts.membershipDetails;
   return `${inv.id}:${inv.grandTotal}:${inv.subtotal}:${inv.taxAmount}:${inv.status}:${gstMode}:${lines}:${pays}:${mem?.membershipId ?? ""}:${mem?.validFrom ?? ""}:${mem?.vehicleName ?? ""}:${opts.vehicleDetailsLine ?? ""}:${opts.odometerReading ?? ""}`;
@@ -71,9 +75,11 @@ async function savePdfToDatabase(
   opts: InvoicePdfOpts,
   cacheKey: string,
   filename: string,
-  content: string
+  content: string,
+  persistToDb = true
 ): Promise<void> {
   clientPdfCache.set(cacheKey, { content, filename });
+  if (!persistToDb) return;
   try {
     await persistInvoicePdf(opts.invoice.id, {
       filename,
@@ -113,10 +119,14 @@ export function prefetchInvoicePdf(opts: InvoicePdfOpts): void {
 }
 
 /** Resolve PDF: database → memory → generate and save. */
-export async function ensureInvoicePdfAttachment(opts: InvoicePdfOpts): Promise<{
+export async function ensureInvoicePdfAttachment(
+  opts: InvoicePdfOpts,
+  options?: { persistToDb?: boolean }
+): Promise<{
   filename: string;
   content: string;
 }> {
+  const persistToDb = options?.persistToDb !== false;
   const cacheKey = buildInvoicePdfCacheKey(opts);
   const filename = invoicePdfFilename(opts.invoice.invoiceNumber, opts.business.gstRegistrationStatus);
 
@@ -137,23 +147,32 @@ export async function ensureInvoicePdfAttachment(opts: InvoicePdfOpts): Promise<
 
   const html = buildPrintHtml(opts);
   const content = await fetchPrintQualityPdfBase64(html, cacheKey);
-  await savePdfToDatabase(opts, cacheKey, filename, content);
+  await savePdfToDatabase(opts, cacheKey, filename, content, persistToDb);
   return { filename, content };
 }
 
 /**
  * PDF attachment for download — same layout and engine as Print → Save as PDF.
  */
-export async function buildInvoicePdfAttachment(opts: InvoicePdfOpts): Promise<{
+export async function buildInvoicePdfAttachment(
+  opts: InvoicePdfOpts,
+  options?: { persistToDb?: boolean }
+): Promise<{
   filename: string;
   content: string;
 }> {
-  return ensureInvoicePdfAttachment(opts);
+  return ensureInvoicePdfAttachment(opts, options);
 }
 
-export async function downloadInvoicePdf(opts: InvoicePdfOpts): Promise<void> {
-  requireCanExportData();
-  const { filename, content } = await buildInvoicePdfAttachment(opts);
+/** Trigger a browser file download from a generated invoice PDF (no export-lock check). */
+export async function downloadInvoicePdfFile(
+  opts: InvoicePdfOpts,
+  options?: { persistToDb?: boolean }
+): Promise<void> {
+  // Customer/public downloads must not wait on staff invoice-store persistence.
+  const { filename, content } = await buildInvoicePdfAttachment(opts, {
+    persistToDb: options?.persistToDb ?? false,
+  });
   const binary = atob(content);
   const bytes = new Uint8Array(binary.length);
   for (let i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i);
@@ -162,8 +181,20 @@ export async function downloadInvoicePdf(opts: InvoicePdfOpts): Promise<void> {
   const a = document.createElement("a");
   a.href = url;
   a.download = filename;
+  a.rel = "noopener";
+  // Some browsers ignore click() unless the anchor is in the document.
+  a.style.display = "none";
+  document.body.appendChild(a);
   a.click();
-  URL.revokeObjectURL(url);
+  a.remove();
+  // Revoking immediately can cancel the download in Chrome/Safari.
+  window.setTimeout(() => URL.revokeObjectURL(url), 2_000);
+}
+
+/** Staff/workshop download — blocked when subscription export is locked. */
+export async function downloadInvoicePdf(opts: InvoicePdfOpts): Promise<void> {
+  requireCanExportData();
+  await downloadInvoicePdfFile(opts, { persistToDb: true });
 }
 
 /**

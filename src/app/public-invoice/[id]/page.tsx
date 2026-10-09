@@ -5,8 +5,10 @@ import { useParams, useRouter, useSearchParams } from "next/navigation";
 import { apiGet } from "@/lib/api-client";
 import { buildTaxInvoicePrintHtml, formatInvoiceVehicleDetailsLine } from "@/lib/tax-invoice-format";
 import { resolveMembershipInvoiceDetails } from "@/lib/membership-invoice";
+import { downloadInvoicePdfFile, type InvoicePdfOpts } from "@/lib/invoice-pdf";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
+import { toast } from "sonner";
 import {
   Printer,
   Download,
@@ -47,6 +49,7 @@ export default function PublicInvoicePage() {
   const [data, setData] = useState<PublicInvoiceData | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [downloading, setDownloading] = useState(false);
 
   useEffect(() => {
     if (!id) return;
@@ -64,11 +67,13 @@ export default function PublicInvoicePage() {
       });
   }, [id]);
 
-  const previewHtml = useMemo(() => {
-    if (!data) return "";
+  const invoicePdfOpts = useMemo((): InvoicePdfOpts | null => {
+    if (!data) return null;
     const { invoice, jobCard, vehicle, businessSettings } = data;
-    
-    const totalPaid = (invoice.payments ? invoice.payments.reduce((s: number, p: any) => s + p.amount, 0) : 0) + (invoice.walletAmountUsed || 0);
+
+    const totalPaid =
+      (invoice.payments ? invoice.payments.reduce((s: number, p: any) => s + p.amount, 0) : 0) +
+      (invoice.walletAmountUsed || 0);
     const remainingBalance = Math.max(0, invoice.grandTotal - totalPaid);
 
     const business = {
@@ -82,7 +87,8 @@ export default function PublicInvoicePage() {
       ...business,
       businessName: businessSettings?.businessName || "MY DETAIL OS",
       businessTagline: businessSettings?.businessTagline || "Car Wash & Detailing Studio",
-      businessAddress: businessSettings?.businessAddress || "80 Feet Road, Koramangala, Bengaluru 560034",
+      businessAddress:
+        businessSettings?.businessAddress || "80 Feet Road, Koramangala, Bengaluru 560034",
       businessPhone: businessSettings?.businessPhone || "+91-80-4123-4567",
       businessWhatsApp: businessSettings?.businessWhatsApp || "+91-80-4123-4567",
       businessEmail: businessSettings?.businessEmail || "hello@mydetailos.com",
@@ -109,37 +115,53 @@ export default function PublicInvoicePage() {
           ? jobCard.odometerReading
           : vehicle?.odometer;
 
-    return buildTaxInvoicePrintHtml(
-      {
-        invoice,
-        jobCard,
-        customerName: invoice.customerName,
-        customerPhone: invoice.customerPhone,
-        customerEmail: jobCard?.customerEmail ?? "",
-        customerAddress: jobCard?.customerAddress ?? "",
-        vehicleMakeModel: invoice.vehicleMakeModel || jobCard?.vehicleMakeModel || "—",
-        vehicleDetailsLine: vehicleDetailsLine || undefined,
-        odometerReading: odometerReading ?? undefined,
-        business: businessDetails,
-        payments: invoice.payments || [],
-        totalPaid,
-        remainingBalance,
-        referralCode: customerRefCode || invoice.referralCodeUsed,
-        referralRewardAmount: invoice.rewardDiscount || 0,
-        newCustomerDiscount: invoice.discountAmount || 0,
-        membershipId: invoice.membershipId,
-        membershipPackageName: invoice.membershipPackageName,
-        membershipDetails: resolveMembershipInvoiceDetails({ invoice }) ?? undefined,
-      },
-      { includePrintScript: false }
-    );
-  }, [data]);
+    return {
+      invoice,
+      jobCard,
+      customerName: invoice.customerName,
+      customerPhone: invoice.customerPhone,
+      customerEmail: jobCard?.customerEmail ?? "",
+      customerAddress: jobCard?.customerAddress ?? "",
+      vehicleMakeModel: invoice.vehicleMakeModel || jobCard?.vehicleMakeModel || "—",
+      vehicleDetailsLine: vehicleDetailsLine || undefined,
+      odometerReading: odometerReading ?? undefined,
+      business: businessDetails,
+      payments: invoice.payments || [],
+      totalPaid,
+      remainingBalance,
+      referralCode: customerRefCode || invoice.referralCodeUsed,
+      referralRewardAmount: invoice.rewardDiscount || 0,
+      newCustomerDiscount: invoice.discountAmount || 0,
+      membershipId: invoice.membershipId,
+      membershipPackageName: invoice.membershipPackageName,
+      membershipDetails: resolveMembershipInvoiceDetails({ invoice }) ?? undefined,
+    };
+  }, [data, customerRefCode]);
+
+  const previewHtml = useMemo(() => {
+    if (!invoicePdfOpts) return "";
+    return buildTaxInvoicePrintHtml(invoicePdfOpts, { includePrintScript: false });
+  }, [invoicePdfOpts]);
 
   const handlePrint = () => {
     const iframe = document.getElementById("invoice-iframe") as HTMLIFrameElement;
     if (iframe && iframe.contentWindow) {
       iframe.contentWindow.focus();
       iframe.contentWindow.print();
+    }
+  };
+
+  const handleDownload = async () => {
+    if (!invoicePdfOpts || downloading) return;
+    setDownloading(true);
+    try {
+      await downloadInvoicePdfFile(invoicePdfOpts);
+      toast.success("Invoice PDF downloaded");
+    } catch (err) {
+      console.error("Invoice PDF download failed", err);
+      toast.error(err instanceof Error ? err.message : "Could not download the invoice PDF.");
+    } finally {
+      setDownloading(false);
     }
   };
 
@@ -232,20 +254,21 @@ export default function PublicInvoicePage() {
           <Button
             variant="outline"
             size="sm"
-            className="h-9 text-xs gap-2 text-slate-700 border-slate-200 bg-white hover:bg-white hover:text-slate-800 shadow-sm rounded-lg"
+            className="h-9 gap-2 rounded-lg border !border-slate-300 !bg-white text-xs font-semibold !text-slate-800 shadow-sm hover:!bg-slate-50 hover:!text-slate-900 dark:!border-slate-300 dark:!bg-white dark:!text-slate-800 dark:hover:!bg-slate-50 dark:hover:!text-slate-900"
             onClick={handlePrint}
           >
-            <Printer className="w-3.5 h-3.5" />
+            <Printer className="size-3.5 shrink-0 !text-slate-700" />
             <span className="inline">Print Invoice</span>
           </Button>
           <Button
             variant="outline"
             size="sm"
-            className="h-9 text-xs gap-2 text-slate-700 border-slate-200 bg-white hover:bg-white hover:text-slate-800 shadow-sm rounded-lg"
-            onClick={handlePrint}
+            className="h-9 gap-2 rounded-lg border !border-slate-300 !bg-white text-xs font-semibold !text-slate-800 shadow-sm hover:!bg-slate-50 hover:!text-slate-900 dark:!border-slate-300 dark:!bg-white dark:!text-slate-800 dark:hover:!bg-slate-50 dark:hover:!text-slate-900"
+            onClick={() => void handleDownload()}
+            disabled={downloading || !invoicePdfOpts}
           >
-            <Download className="w-3.5 h-3.5" />
-            <span className="inline">Download</span>
+            <Download className="size-3.5 shrink-0 !text-slate-700" />
+            <span className="inline">{downloading ? "Downloading…" : "Download"}</span>
           </Button>
         </div>
       </header>

@@ -1,13 +1,19 @@
 "use client";
 
+import { useState } from "react";
 import { useParams } from "next/navigation";
+import { toast } from "sonner";
 import { useCustomerDashboardStore } from "@/store/customer-dashboard-store";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { ArrowLeft, FileText, CheckCircle2, Clock, AlertCircle, ExternalLink, Download } from "lucide-react";
+import { ArrowLeft, FileText, CheckCircle2, AlertCircle, ExternalLink, Download } from "lucide-react";
 import Link from "next/link";
 import { cn, formatDate, formatCurrency } from "@/lib/utils";
+import { apiGet } from "@/lib/api-client";
+import { downloadInvoicePdfFile, type InvoicePdfOpts } from "@/lib/invoice-pdf";
+import { formatInvoiceVehicleDetailsLine } from "@/lib/tax-invoice-format";
+import { resolveMembershipInvoiceDetails } from "@/lib/membership-invoice";
 
 function getTotalPaid(invoice: any): number {
   return (invoice.payments || []).reduce((s: number, p: any) => s + (p.amount || 0), 0);
@@ -27,10 +33,89 @@ const STATUS_COLORS: Record<string, string> = {
   ISSUED: "bg-slate-100 text-slate-700 dark:bg-slate-800/30 dark:text-slate-300",
 };
 
+type PublicInvoicePayload = {
+  invoice: any;
+  jobCard: any;
+  vehicle?: {
+    variant?: string;
+    year?: number;
+    fuelType?: string;
+    color?: string;
+    odometer?: number;
+  } | null;
+  businessSettings: any;
+};
+
+function buildPublicInvoicePdfOpts(
+  data: PublicInvoicePayload,
+  referralCode?: string
+): InvoicePdfOpts {
+  const { invoice, jobCard, vehicle, businessSettings } = data;
+  const totalPaid =
+    (invoice.payments ? invoice.payments.reduce((s: number, p: any) => s + p.amount, 0) : 0) +
+    (invoice.walletAmountUsed || 0);
+  const remainingBalance = Math.max(0, (invoice.grandTotal || 0) - totalPaid);
+  const vehicleDetailsLine = formatInvoiceVehicleDetailsLine({
+    variant: vehicle?.variant,
+    year: vehicle?.year,
+    fuelType: vehicle?.fuelType,
+    color: vehicle?.color,
+  });
+  const odometerReading =
+    invoice?.odometerReading != null && Number.isFinite(invoice.odometerReading)
+      ? invoice.odometerReading
+      : jobCard?.odometerReading != null && Number.isFinite(jobCard.odometerReading)
+        ? jobCard.odometerReading
+        : vehicle?.odometer;
+
+  return {
+    invoice,
+    jobCard,
+    customerName: invoice.customerName,
+    customerPhone: invoice.customerPhone,
+    customerEmail: jobCard?.customerEmail ?? "",
+    customerAddress: jobCard?.customerAddress ?? "",
+    vehicleMakeModel: invoice.vehicleMakeModel || jobCard?.vehicleMakeModel || "—",
+    vehicleDetailsLine: vehicleDetailsLine || undefined,
+    odometerReading: odometerReading ?? undefined,
+    business: {
+      gstRegistrationStatus:
+        businessSettings?.gstRegistrationStatus === "NOT_REGISTERED"
+          ? "NOT_REGISTERED"
+          : "REGISTERED",
+      businessName: businessSettings?.businessName || "MY DETAIL OS",
+      businessTagline: businessSettings?.businessTagline || "Car Wash & Detailing Studio",
+      businessAddress:
+        businessSettings?.businessAddress || "80 Feet Road, Koramangala, Bengaluru 560034",
+      businessPhone: businessSettings?.businessPhone || "+91-80-4123-4567",
+      businessWhatsApp: businessSettings?.businessWhatsApp || "+91-80-4123-4567",
+      businessEmail: businessSettings?.businessEmail || "hello@mydetailos.com",
+      businessWebsite: businessSettings?.businessWebsite || "www.mydetailos.com",
+      gstin: businessSettings?.gstin || "29AABCT1234F1ZP",
+      companyPan: businessSettings?.companyPan || "ABCDE1234F",
+      bankName: businessSettings?.bankName || "",
+      bankBranch: businessSettings?.bankBranch || "",
+      bankAccountNumber: businessSettings?.bankAccountNumber || "",
+      bankIfsc: businessSettings?.bankIfsc || "",
+      bankUpi: businessSettings?.bankUpi || "",
+    },
+    payments: invoice.payments || [],
+    totalPaid,
+    remainingBalance,
+    referralCode: referralCode || invoice.referralCodeUsed,
+    referralRewardAmount: invoice.rewardDiscount || 0,
+    newCustomerDiscount: invoice.discountAmount || 0,
+    membershipId: invoice.membershipId,
+    membershipPackageName: invoice.membershipPackageName,
+    membershipDetails: resolveMembershipInvoiceDetails({ invoice }) ?? undefined,
+  };
+}
+
 export default function InvoiceDetailPage() {
   const params = useParams();
   const id = params.id as string;
   const { invoices, jobCards, customer } = useCustomerDashboardStore();
+  const [downloading, setDownloading] = useState(false);
 
   const invoice = invoices.find((inv) => inv.id === id);
 
@@ -56,6 +141,32 @@ export default function InvoiceDetailPage() {
   const outstanding = Math.max(0, (invoice.grandTotal || 0) - paid);
   const status = paid === 0 ? "ISSUED" : outstanding > 0.01 ? "PARTIALLY_PAID" : "PAID";
   const linkedJob = jobCards.find((j) => j.id === invoice.jobCardId);
+  const publicInvoiceHref = `/public-invoice/${invoice.id}${
+    customer?.referralCode ? `?ref=${encodeURIComponent(customer.referralCode)}` : ""
+  }`;
+
+  async function handleDownloadPdf() {
+    if (downloading) return;
+    setDownloading(true);
+    try {
+      // Public endpoint — no staff/customer JWT required.
+      const data = await apiGet<PublicInvoicePayload>(
+        `/api/public/invoices/${encodeURIComponent(invoice!.id)}`
+      );
+      if (!data?.invoice) {
+        throw new Error("Invoice details could not be loaded.");
+      }
+      await downloadInvoicePdfFile(
+        buildPublicInvoicePdfOpts(data, customer?.referralCode || undefined)
+      );
+      toast.success("Invoice PDF downloaded");
+    } catch (err) {
+      console.error("[customer/invoices] PDF download failed", err);
+      toast.error(err instanceof Error ? err.message : "Could not download the invoice PDF.");
+    } finally {
+      setDownloading(false);
+    }
+  }
 
   return (
     <div className="p-4 sm:p-6 space-y-6 max-w-3xl">
@@ -79,18 +190,18 @@ export default function InvoiceDetailPage() {
             <Badge className={cn(STATUS_COLORS[status] || "")}>
               {status.replace(/_/g, " ")}
             </Badge>
-            {status === "PAID" && (
-              <Link
-                href={`/public-invoice/${invoice.id}${customer?.referralCode ? `?ref=${encodeURIComponent(customer.referralCode)}` : ""}`}
-                target="_blank"
-              >
-                <Button variant="default" size="sm" className="gap-1.5">
-                  <Download className="h-3.5 w-3.5" />
-                  Download PDF
-                </Button>
-              </Link>
-            )}
-            <Link href={`/public-invoice/${invoice.id}${customer?.referralCode ? `?ref=${encodeURIComponent(customer.referralCode)}` : ""}`} target="_blank">
+            <Button
+              type="button"
+              variant="default"
+              size="sm"
+              className="gap-1.5"
+              onClick={() => void handleDownloadPdf()}
+              disabled={downloading}
+            >
+              <Download className="h-3.5 w-3.5" />
+              {downloading ? "Downloading…" : "Download PDF"}
+            </Button>
+            <Link href={publicInvoiceHref} target="_blank">
               <Button variant="outline" size="sm" className="gap-1.5">
                 <ExternalLink className="h-3.5 w-3.5" />
                 View Invoice
