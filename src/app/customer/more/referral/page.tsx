@@ -1,33 +1,68 @@
 "use client";
 
+import { useState } from "react";
 import { useCustomerAuthStore } from "@/store/customer-auth-store";
 import { useCustomerDashboardStore } from "@/store/customer-dashboard-store";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Share2, Copy, Users } from "lucide-react";
-import Link from "next/link";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import { WhatsAppIcon } from "@/components/icons/whatsapp-icon";
+import { Share2, Copy, Users, Mail, MessageSquare } from "lucide-react";
 import { toast } from "sonner";
+
+function buildReferralMessage(code: string) {
+  return `Use my referral code ${code} at MY DETAIL OS and get exclusive rewards! Book your service today.`;
+}
 
 export default function ReferralPage() {
   const { user } = useCustomerAuthStore();
   const { customer } = useCustomerDashboardStore();
+  const [shareOpen, setShareOpen] = useState(false);
 
   const referralCode = customer?.referralCode || user?.referralCode || "";
+  const message = referralCode ? buildReferralMessage(referralCode) : "";
 
   const copyCode = () => {
     if (!referralCode) return;
-    navigator.clipboard.writeText(referralCode);
+    void navigator.clipboard.writeText(referralCode);
     toast.success("Referral code copied!");
   };
 
-  const shareCode = () => {
-    if (!referralCode) return;
-    const message = `Use my referral code ${referralCode} at MY DETAIL OS and get exclusive rewards! Book your service today.`;
-    if (navigator.share) {
-      void navigator.share({ title: "MY DETAIL OS Referral", text: message });
-    } else {
-      copyCode();
-    }
+  const copyMessage = () => {
+    if (!message) return;
+    void navigator.clipboard.writeText(message);
+    toast.success("Referral message copied!");
+    setShareOpen(false);
+  };
+
+  const shareViaWhatsApp = () => {
+    if (!message) return;
+    window.open(
+      `https://wa.me/?text=${encodeURIComponent(message)}`,
+      "_blank",
+      "noopener,noreferrer"
+    );
+    setShareOpen(false);
+  };
+
+  const shareViaSms = () => {
+    if (!message) return;
+    window.open(`sms:?&body=${encodeURIComponent(message)}`, "_self");
+    setShareOpen(false);
+  };
+
+  const shareViaEmail = () => {
+    if (!message) return;
+    const subject = encodeURIComponent("MY DETAIL OS Referral");
+    const body = encodeURIComponent(message);
+    window.open(`mailto:?subject=${subject}&body=${body}`, "_self");
+    setShareOpen(false);
   };
 
   return (
@@ -47,7 +82,7 @@ export default function ReferralPage() {
             <Button variant="outline" className="flex-1" onClick={copyCode} disabled={!referralCode}>
               <Copy className="h-4 w-4 mr-2" /> Copy
             </Button>
-            <Button className="flex-1" onClick={shareCode} disabled={!referralCode}>
+            <Button className="flex-1" onClick={() => setShareOpen(true)} disabled={!referralCode}>
               <Share2 className="h-4 w-4 mr-2" /> Share
             </Button>
           </div>
@@ -74,6 +109,40 @@ export default function ReferralPage() {
           ))}
         </CardContent>
       </Card>
+
+      <Dialog open={shareOpen} onOpenChange={setShareOpen}>
+        <DialogContent className="sm:max-w-md" mobileVariant="sheet">
+          <DialogHeader>
+            <DialogTitle>Share referral code</DialogTitle>
+            <DialogDescription>
+              Invite friends with your code <span className="font-mono font-medium text-foreground">{referralCode}</span>
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="rounded-lg bg-muted/50 px-3 py-3 text-sm text-muted-foreground">
+            {message}
+          </div>
+
+          <div className="grid grid-cols-2 gap-3">
+            <Button variant="outline" className="h-auto flex-col gap-2 py-4" onClick={shareViaWhatsApp}>
+              <WhatsAppIcon className="h-5 w-5 text-[#25D366]" />
+              <span className="text-xs font-medium">WhatsApp</span>
+            </Button>
+            <Button variant="outline" className="h-auto flex-col gap-2 py-4" onClick={shareViaSms}>
+              <MessageSquare className="h-5 w-5" />
+              <span className="text-xs font-medium">Messages</span>
+            </Button>
+            <Button variant="outline" className="h-auto flex-col gap-2 py-4" onClick={shareViaEmail}>
+              <Mail className="h-5 w-5" />
+              <span className="text-xs font-medium">Email</span>
+            </Button>
+            <Button variant="outline" className="h-auto flex-col gap-2 py-4" onClick={copyMessage}>
+              <Copy className="h-5 w-5" />
+              <span className="text-xs font-medium">Copy message</span>
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
